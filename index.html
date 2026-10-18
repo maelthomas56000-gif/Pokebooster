@@ -506,7 +506,7 @@ const hue=id=>[...id].reduce((a,c)=>a*31+c.charCodeAt(0),7)%360;
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const totalValue=()=>Object.values(col).reduce((s,c)=>s+(c.price||0)*c.count,0);
 let TY=false;
-const go=s=>{if(!['focus','reveal','results'].includes(s))TY=false;screen=s;render()};
+const go=s=>{if(!['focus','reveal','results'].includes(s)){TY=false;BATTLE=null}screen=s;render()};
 const toast=m=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),4500)};
 function hideSet(id){
   if(HID.has(id))return;HID.add(id);store.set('hid_v1',[...HID]);
@@ -664,7 +664,8 @@ function drawNorm(cards,n=10,pika=false,vint=false){
   return out.filter(Boolean).map((c,i)=>[c,i]).sort((x,y)=>K(x[0])-K(y[0])||x[1]-y[1]).map(x=>x[0]);
 }
 
-let GOD=false;
+let GOD=false,BATTLE=null;
+const fairDraw=fn=>{const o=[cfg.luck,cfg.gp,cfg.miss,cfg.rp];cfg.luck=1;cfg.gp=1;cfg.miss=false;cfg.rp=true;try{return fn()}finally{[cfg.luck,cfg.gp,cfg.miss,cfg.rp]=o}};
 const pickW=(arr,k,w)=>{const a=[...arr],o=[];while(o.length<k&&a.length){const tot=a.reduce((s,c)=>s+w(c),0);let r=Math.random()*tot,i=0;for(;i<a.length-1;i++){r-=w(a[i]);if(r<=0)break}o.push(a.splice(i,1)[0])}return o};
 function drawGod(all,n,pika){
   const PKU=c=>/pikachu/i.test(c.name),base=all.filter(c=>!c.ni&&!c.rp),k=n-(pika?1:0);
@@ -720,9 +721,9 @@ async function loadArt(a,id){
 // Booster choisi : grand format, on le swipe vers le haut pour le déchirer
 function focusScreen(){
   const s=sets.find(x=>x.id===setId);
-  $.innerHTML=`<div class="fh"><button class="back" onclick="go(TY?'tycoon':fromSet==='list'?'collection':fromSet?'set':'home')">${TY?'‹ Tycoon':fromSet==='list'?'‹ Collection':fromSet?'‹ '+esc(s.name):'‹ Boosters'}</button></div>
+  $.innerHTML=`<div class="fh"><button class="back" onclick="${BATTLE?"BATTLE=null;go('social')":"go(TY?'tycoon':fromSet==='list'?'collection':fromSet?'set':'home')"}">${BATTLE?'‹ Amis':TY?'‹ Tycoon':fromSet==='list'?'‹ Collection':fromSet?'‹ '+esc(s.name):'‹ Boosters'}</button></div>
   <div class="center fpk">${packHTML(s,'on foc')}</div>
-  <div class="swh">Découpe le booster avec ton doigt, dans le sens que tu veux</div>${TY?`<div class="sub" style="text-align:center">Prix : <b>${fm(packPrice(s.id))}</b> · Ton argent : <b>${fm(tyc.money)}</b></div>`:''}
+  <div class="swh">${BATTLE?'⚔️ Combat contre '+esc(BATTLE.f.n)+' · ':''}Découpe le booster avec ton doigt, dans le sens que tu veux</div>${TY?`<div class="sub" style="text-align:center">Prix : <b>${fm(packPrice(s.id))}</b> · Ton argent : <b>${fm(tyc.money)}</b></div>`:''}
   <button class="cta" id="openb">Ouvrir le booster</button>`;
   const p=$.querySelector('.pk'),area=$.querySelector('.fpk');
   p.style.setProperty('--fs',Math.max(1.15,Math.min(1.62,(innerHeight-340)/330,(innerWidth-60)/190)).toFixed(2));
@@ -826,20 +827,20 @@ async function tearOpen(p,pts){
     const [cards]=await Promise.all([t,new Promise(r=>setTimeout(r,1150))]);
     if(cards.length&&cards[0].gen){clearTimeout(tm);ovl&&ovl.remove();ov.remove();busy=false;hideSet(id);toast('Cette extension n’a pas d’images disponibles : elle a été retirée de la liste.');go('home');return}
     clearTimeout(tm); ovl&&ovl.remove();
-    const S0=sets.find(x=>x.id===id)||{id,name:''};pack=TY?tycDraw(cards,S0):draw(cards,packSize(S0),is30(S0),isVint(S0)); if(pack.length<1) throw 0;
+    const S0=sets.find(x=>x.id===id)||{id,name:''};pack=TY?tycDraw(cards,S0):BATTLE?fairDraw(()=>draw(cards,packSize(S0),is30(S0),isVint(S0))):draw(cards,packSize(S0),is30(S0),isVint(S0)); if(pack.length<1) throw 0;
     pack.forEach(c=>c.isNew=!col[c.id]);
     pack.forEach(c=>{try{new Image().src=img(c,'high')}catch(e){}});
     packVal=pack.reduce((s,c)=>s+(val(c)||0),0);
-    if(!TY||tyc.keep) pack.forEach(c=>{const o=col[c.id];col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:c.rarity,tier:c.tier,price:(c.o?(c.o[0]??c.o[1]):(c.p??c.ph))??o?.price??null,count:(o?.count||0)+1}});
+    if(!BATTLE&&(!TY||tyc.keep)) pack.forEach(c=>{const o=col[c.id];col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:c.rarity,tier:c.tier,price:(c.o?(c.o[0]??c.o[1]):(c.p??c.ph))??o?.price??null,count:(o?.count||0)+1}});
     if(TY){const pr=packPrice(id),mx=pack.reduce((m,c)=>Math.max(m,val(c)||0),0);tycPay={cost:pr,rev:packVal};tyc.money+=packVal-pr;tyc.life+=packVal;tyc.run+=packVal;tyc.packs++;if(mx>tyc.best)tyc.best=mx;saveT()}
-    stats.packs++;
+    if(!BATTLE){stats.packs++;
     {const d=n=>{const t=new Date();t.setDate(t.getDate()-n);return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()},td=d(0);
      if(stats.last!==td){stats.streak=stats.last===d(1)?(stats.streak||0)+1:1;stats.last=td;stats.bst=Math.max(stats.bst||0,stats.streak)}
      (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+1}
     const bc=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]);
-    stats.gods=(stats.gods||0)+(GOD?1:0);(stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:packVal,g:GOD?1:0});stats.hist.length=Math.min(stats.hist.length,20);
+    stats.gods=(stats.gods||0)+(GOD?1:0);stats.gn=(stats.gn||0)+(GOD&&(TY||cfg.gp<=1)?1:0);(stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:packVal,g:GOD?1:0});stats.hist.length=Math.min(stats.hist.length,20);
     if(!TY&&(!stats.best||(val(bc)||0)>stats.best.price)) stats.best={name:bc.name,price:val(bc)||0,image:bc.image};
-    store.set(KEY,col); store.set(SKEY,stats);
+    store.set(KEY,col); store.set(SKEY,stats);}
     idx=0; busy=false; fx('#fff',0,true); ov.remove(); go('reveal');
   }catch(e){
     clearTimeout(tm); ovl&&ovl.remove(); delete pre[id]; busy=false;
@@ -907,6 +908,7 @@ document.addEventListener('keydown',e=>{
 
 // ---------- Résultats ----------
 function results(){
+  if(BATTLE&&window.battleResults)return window.battleResults();
   L=pack; const best=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]);
   $.innerHTML=`<h1>${GOD?'✦ GOD PACK ✦':'Ton tirage'}</h1><p class="big pv">${fmt(packVal)}</p>
   <div class="sub">Meilleure carte : ${esc(best.name)}<span class="pv"> · ${fmt(val(best))}</span></div>
@@ -1017,17 +1019,17 @@ async function tycPrep(id){
   const cards=await (pre[id]||(pre[id]=loadSet(id).catch(e=>{delete pre[id];throw e})));
   if(!cards.length||cards[0].gen){hideSet(id);throw new Error('noimg')}
   if(!tyc.ev[id]){
-    const S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),L0=cfg.luck,M0=cfg.miss;cfg.luck=1;cfg.miss=false;let t=0;const N=600;
-    try{for(let i=0;i<N;i++)t+=draw(cards,sz,is30(S0),isVint(S0)).reduce((s,c)=>s+cv(c),0)}finally{cfg.luck=L0;cfg.miss=M0}
+    const S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1;cfg.miss=false;cfg.gp=1;cfg.rp=true;let t=0;const N=600;
+    try{for(let i=0;i<N;i++)t+=draw(cards,sz,is30(S0),isVint(S0)).reduce((s,c)=>s+cv(c),0)}finally{cfg.luck=L0;cfg.miss=M0;cfg.gp=G0;cfg.rp=R0}
     tyc.ev[id]=Math.round(t/N*100)/100;saveT();
   }
   tcards[id]=cards;return cards;
 }
 function tycRun(id,n){
   const cards=tcards[id],S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),pk=is30(S0),vi=isVint(S0),
-    price=packPrice(id),mult=sellMult()*mktMult(S0),L0=cfg.luck,M0=cfg.miss;
+    price=packPrice(id),mult=sellMult()*mktMult(S0),L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;
   let rev=0,nc=0,nw=0,gods=0,top=[];
-  cfg.luck=L0*(1+.04*tyc.lv.luck);cfg.miss=false;
+  cfg.luck=1*(1+.04*tyc.lv.luck);cfg.miss=false;cfg.gp=1;cfg.rp=true;
   try{for(let i=0;i<n;i++){
     const pack=draw(cards,sz,pk,vi);if(GOD)gods++;
     for(const c of pack){
@@ -1037,7 +1039,7 @@ function tycRun(id,n){
       if(top.length>60){top.sort((a,b)=>b[1]-a[1]);top.length=12}
     }
     stats.packs++;
-  }}finally{cfg.luck=L0;cfg.miss=M0}
+  }}finally{cfg.luck=L0;cfg.miss=M0;cfg.gp=G0;cfg.rp=R0}
   top.sort((a,b)=>b[1]-a[1]);top.length=Math.min(top.length,12);
   {const d=k=>{const t=new Date();t.setDate(t.getDate()-k);return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()},td=d(0);
    if(stats.last!==td){stats.streak=stats.last===d(1)?(stats.streak||0)+1:1;stats.last=td;stats.bst=Math.max(stats.bst||0,stats.streak)}
@@ -1049,8 +1051,8 @@ function tycRun(id,n){
   return{n,rev,cost,nc,nw,gods,top,profit:rev-cost};
 }
 function tycDraw(cards,S0){
-  const L0=cfg.luck,M0=cfg.miss;cfg.luck=L0*(1+.04*tyc.lv.luck);cfg.miss=false;let pk;
-  try{pk=draw(cards,packSize(S0),is30(S0),isVint(S0))}finally{cfg.luck=L0;cfg.miss=M0}
+  const L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1*(1+.04*tyc.lv.luck);cfg.miss=false;cfg.gp=1;cfg.rp=true;let pk;
+  try{pk=draw(cards,packSize(S0),is30(S0),isVint(S0))}finally{cfg.luck=L0;cfg.miss=M0;cfg.gp=G0;cfg.rp=R0}
   const m=sellMult()*mktMult(S0);
   return pk.map(c=>{const v=cv(c)*m;return{...c,o:[c.p??null,c.ph??null],p:v,ph:v}});
 }
@@ -1324,10 +1326,10 @@ const BASE='https://firestore.googleapis.com/v1/projects/poke-3342a/databases/(d
 const myId=()=>{let c=store.get('pid_v1',null);if(!c){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';c=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>A[x%A.length]).join('');store.set('pid_v1',c)}return c};
 const dec=s=>{s=(s||'').trim();if(!s.startsWith('PB1-'))throw 0;const o=JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));if(!o||typeof o.n!=='string')throw 0;return o};
 const name=()=>store.get(ME,{name:''}).name||'';
-const mine=()=>{const own=Object.values(col),b=stats.best;return {n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,s:stats.streak||0,g:stats.gods||0,r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:b&&b.image?{n:b.name,i:b.image,p:b.price}:null,bt:store.get(BT,[]),d:Date.now()}};
+const mine=()=>{const own=Object.values(col),b=stats.best;return {n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:b&&b.image?{n:b.name,i:b.image,p:b.price}:null,bt:store.get(BT,[]),d:Date.now()}};
 const push=async()=>{if(!name())return false;const m=mine();while(JSON.stringify(m).length>1800&&m.bt.length)m.bt.pop();try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{j:{stringValue:JSON.stringify(m)}}})});return r.ok}catch(e){return false}};
 const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json();return JSON.parse(d.fields.j.stringValue)};
-const card=(o,extra)=>`<div class="pc"><div class="av" style="width:56px;height:56px;font-size:24px;background:hsl(${hue(o.n)} 55% 45%)">${esc((o.n[0]||'?').toUpperCase())}</div><b style="font-size:18px">${esc(o.n)}</b>${o.b?`<img class="fv" src="${esc(o.b.i)}/high.webp" alt="" onerror="this.remove()"><small>${esc(o.b.n)} · ${fmt(o.b.p)}</small>`:''}<div class="sg"><div><b>${o.p}</b><small>Boosters</small></div><div><b>${o.u}</b><small>Différentes</small></div><div><b>${o.t}</b><small>Total</small></div><div><b>${fmt(o.v)}</b><small>Valeur</small></div>${o.p?`<div><b>${fmt(o.v/o.p)}</b><small>Moy. / booster</small></div>`:''}${o.s!=null?`<div><b>${o.s} j</b><small>Série</small></div><div><b>${o.r||0}</b><small>Cartes UR/SR</small></div><div><b>${o.g||0}</b><small>God packs</small></div>`:''}</div>${extra||''}</div>`;
+const card=(o,extra)=>`<div class="pc"><div class="av" style="width:56px;height:56px;font-size:24px;background:hsl(${hue(o.n)} 55% 45%)">${esc((o.n[0]||'?').toUpperCase())}</div><b style="font-size:18px">${esc(o.n)}</b>${o.b?`<img class="fv" src="${esc(o.b.i)}/high.webp" alt="" onerror="this.remove()"><small>${esc(o.b.n)} · ${fmt(o.b.p)}</small>`:''}<div class="sg"><div><b>${o.p}</b><small>Boosters</small></div><div><b>${o.u}</b><small>Différentes</small></div><div><b>${o.t}</b><small>Total</small></div><div><b>${fmt(o.v)}</b><small>Valeur</small></div>${o.p?`<div><b>${fmt(o.v/o.p)}</b><small>Moy. / booster</small></div>`:''}${o.s!=null?`<div><b>${o.s} j</b><small>Série</small></div><div><b>${o.r||0}</b><small>Cartes UR/SR</small></div><div><b>${o.g||0}</b><small>God packs (taux normal)</small></div>`:''}</div>${o.o?((o.o.l>1||o.o.p>1||o.o.m)?`<small>⚠️ Options activées : chance ×${o.o.l} · God pack ${o.o.p} %${o.o.m?' · cartes manquantes':''}</small>`:'<small>✓ Taux de drop normaux</small>'):''}${extra||''}</div>`;
 let ok=null;
 const bh=()=>store.get(BH,[]);
 const rec=code=>bh().filter(h=>h.f===code).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
@@ -1340,26 +1342,26 @@ function resolve(l){
     mb.forEach(m=>{if(m.to===f.code&&!f.bt.some(e=>e.id===m.id))f.wait=m})});
   h.length=Math.min(h.length,30);store.set(BH,h);
 }
-async function fight(f,ch){
-  if(busy)return;busy=true;
-  const id=ch?ch.s:setId,S0=sets.find(x=>x.id===id);
-  if(!S0){busy=false;return toast('Extension indisponible')}
-  const ov=document.createElement('div');ov.className='xbt';ov.innerHTML='<div class="spin"></div>Ouverture du booster…';document.body.appendChild(ov);
-  try{
-    const cards=await(pre[id]||(pre[id]=loadSet(id)));
-    if(!cards.length||cards[0].gen)throw 0;
-    const pk=draw(cards,packSize(S0),is30(S0),isVint(S0));
-    const best=pk.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pk[0]),bv=val(best)||0;
-    const e={id:ch?ch.id:Math.random().toString(36).slice(2,8),to:f.code,s:id,c:{n:best.name,i:best.image,p:bv},t:Date.now()};
-    store.set(BT,[e,...store.get(BT,[]).filter(x=>x.id!==e.id)].slice(0,3));
-    let res='Défi envoyé à '+esc(f.n)+' ! Le résultat apparaîtra dès qu’il aura ouvert son booster.';
-    if(ch){const o=ch.c.p;res=bv>o?'🏆 Tu gagnes !':bv<o?'💀 Tu perds…':'🤝 Égalité';res+=`<br><small>${esc(best.name)} (${fmt(bv)}) contre ${esc(ch.c.n)} (${fmt(o)})</small>`}
-    ov.innerHTML=`<h1>${esc(S0.name||id)}</h1><div class="xbg">${pk.map(c=>`<img class="${c===best?'xbc':''}" src="${img(c,'low')}" alt="">`).join('')}</div><h2>Meilleure carte : ${esc(best.name)} · ${fmt(bv)}</h2><h2>${res}</h2><button class="cta" id="bx">OK</button>`;
-    document.getElementById('bx').onclick=()=>{ov.remove();socialScreen()};
-    push();
-  }catch(err){ov.remove();toast('Impossible d’ouvrir le booster')}
-  busy=false;
+function fight(f,ch){
+  const id=ch?ch.s:setId;
+  if(!sets.find(x=>x.id===id))return toast('Extension indisponible');
+  BATTLE={f,ch};TY=false;fromSet=false;pickSet(id);go('focus');
 }
+window.battleResults=function(){
+  const B=BATTLE,S0=sets.find(x=>x.id===setId)||{name:''};
+  const best=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]),bv=val(best)||0;
+  if(!B.done){B.done=1;const e={id:B.ch?B.ch.id:Math.random().toString(36).slice(2,8),to:B.f.code,s:setId,c:{n:best.name,i:best.image,p:bv},t:Date.now()};store.set(BT,[e,...store.get(BT,[]).filter(x=>x.id!==e.id)].slice(0,3));push()}
+  let res='Défi envoyé ! Le résultat apparaîtra dès que '+esc(B.f.n)+' aura ouvert son booster.';
+  if(B.ch){const o=B.ch.c.p;res=(bv>o?'🏆 Tu gagnes !':bv<o?'💀 Tu perds…':'🤝 Égalité')+`<br><small>${esc(best.name)} (${fmt(bv)}) contre ${esc(B.ch.c.n)} (${fmt(o)})</small>`}
+  L=pack;
+  $.innerHTML=`<h1>⚔️ Combat contre ${esc(B.f.n)}</h1><div class="sub" style="text-align:center">${esc(S0.name||'')}</div>
+  <div class="pc"><img class="fv" src="${img(best)}" alt=""><b style="font-size:18px">${esc(best.name)}</b><b style="font-size:22px">${fmt(bv)}</b><small>Ta meilleure carte</small></div>
+  <h2 style="text-align:center;margin:10px 16px">${res}</h2>
+  <div class="grid">${pack.map((c,i)=>`<div class="g" style="--i:${i};--tc:${tc(c)}" onclick="zoom(L[${i}])"><img src="${img(c)}" alt=""><span class="pr" style="display:block">${fmt(val(c))}</span></div>`).join('')}</div>
+  <div class="grow"></div><button class="cta" id="bk">Retour aux amis</button>`;
+  document.getElementById('bk').onclick=()=>{BATTLE=null;go('social')};
+  sfx.done(RANK[pack[pack.length-1].tier]);
+};
 function paint(){
   const fr=store.get(FR,[]),h=bh(),S0=sets.find(x=>x.id===setId),m=mine();
   const lb=[{...m,me:1},...fr].sort((a,b)=>b.v-a.v);
