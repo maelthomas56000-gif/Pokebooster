@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#f4f1ff">
 <script>if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))document.documentElement.classList.add('ios')</script>
 <style>html.ios *,html.ios *::before,html.ios *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;mix-blend-mode:normal!important;will-change:auto!important}html.ios #nav{background:rgba(255,255,255,.96)!important}</style>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>PokéBooster</title>
 <style>
 :root{--bg:#0b0920;--ac:#f2c14e;--h:250}
@@ -1307,6 +1312,7 @@ function render(){
   window.addEventListener('online',()=>{if(!sets.length)boot()});
   $.innerHTML='<div class="center"><div class="spin"></div></div>';boot();
 })();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
 </script>
 <style>
 .av{border-radius:50%;object-fit:cover;background:#3a3470;display:inline-flex;align-items:center;justify-content:center;font-weight:800;flex:none}
