@@ -1327,34 +1327,87 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.s
 
 
 
+<style>
+@media (min-width:900px){
+ #app{max-width:980px;margin-left:auto;margin-right:auto}
+ body #nav{left:50%;right:auto;width:min(620px,calc(100% - 28px));transform:translateX(-50%)}
+ .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+ .stats{grid-template-columns:repeat(3,1fr)}
+ .soc .fl{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+ button,.row,.pk{cursor:pointer}
+ #nav button:hover{filter:brightness(1.2)}
+}
+.soc .lb{margin:4px 16px;padding:10px 14px;border-radius:14px;background:#ffffff14;display:flex;justify-content:space-between;gap:8px}
+.soc .lb.me{outline:2px solid #ffd166}
+.bt{position:fixed;inset:0;z-index:50;background:rgba(8,6,24,.97);overflow:auto;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.bt .bg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:560px;width:100%}
+.bt .bg img{width:100%;border-radius:6px}
+.bt .bc{border:3px solid #ffd166;border-radius:10px}
+</style>
 <script>
 (function(){
-const ME='me_v1',FR='friends_v2',FK='AIzaSyBB84eer2Mh_lzwalbSfHAeevh9zDOOVdE';
+const ME='me_v1',FR='friends_v2',BT='bt_v1',BH='bh_v1',FK='AIzaSyBB84eer2Mh_lzwalbSfHAeevh9zDOOVdE';
 const BASE='https://firestore.googleapis.com/v1/projects/poke-3342a/databases/(default)/documents/players';
 const myId=()=>{let c=store.get('pid_v1',null);if(!c){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';c=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>A[x%A.length]).join('');store.set('pid_v1',c)}return c};
 const dec=s=>{s=(s||'').trim();if(!s.startsWith('PB1-'))throw 0;const o=JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));if(!o||typeof o.n!=='string')throw 0;return o};
 const name=()=>store.get(ME,{name:''}).name||'';
-const mine=()=>{const own=Object.values(col),b=stats.best;return {n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,b:b&&b.image?{n:b.name,i:b.image,p:b.price}:null,d:Date.now()}};
-const push=async()=>{if(!name())return false;try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{j:{stringValue:JSON.stringify(mine())}}})});return r.ok}catch(e){return false}};
+const mine=()=>{const own=Object.values(col),b=stats.best;return {n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,s:stats.streak||0,g:stats.gods||0,r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:b&&b.image?{n:b.name,i:b.image,p:b.price}:null,bt:store.get(BT,[]),d:Date.now()}};
+const push=async()=>{if(!name())return false;const m=mine();while(JSON.stringify(m).length>1800&&m.bt.length)m.bt.pop();try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{j:{stringValue:JSON.stringify(m)}}})});return r.ok}catch(e){return false}};
 const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json();return JSON.parse(d.fields.j.stringValue)};
-const card=(o,extra)=>`<div class="pc"><div class="av" style="width:56px;height:56px;font-size:24px;background:hsl(${hue(o.n)} 55% 45%)">${esc((o.n[0]||'?').toUpperCase())}</div><b style="font-size:18px">${esc(o.n)}</b>${o.b?`<img class="fv" src="${esc(o.b.i)}/high.webp" alt="" onerror="this.remove()"><small>${esc(o.b.n)} · ${fmt(o.b.p)}</small>`:''}<div class="sg"><div><b>${o.p}</b><small>Boosters</small></div><div><b>${o.u}</b><small>Différentes</small></div><div><b>${o.t}</b><small>Total</small></div><div><b>${fmt(o.v)}</b><small>Valeur</small></div></div>${extra||''}</div>`;
+const card=(o,extra)=>`<div class="pc"><div class="av" style="width:56px;height:56px;font-size:24px;background:hsl(${hue(o.n)} 55% 45%)">${esc((o.n[0]||'?').toUpperCase())}</div><b style="font-size:18px">${esc(o.n)}</b>${o.b?`<img class="fv" src="${esc(o.b.i)}/high.webp" alt="" onerror="this.remove()"><small>${esc(o.b.n)} · ${fmt(o.b.p)}</small>`:''}<div class="sg"><div><b>${o.p}</b><small>Boosters</small></div><div><b>${o.u}</b><small>Différentes</small></div><div><b>${o.t}</b><small>Total</small></div><div><b>${fmt(o.v)}</b><small>Valeur</small></div>${o.p?`<div><b>${fmt(o.v/o.p)}</b><small>Moy. / booster</small></div>`:''}${o.s!=null?`<div><b>${o.s} j</b><small>Série</small></div><div><b>${o.r||0}</b><small>Cartes UR/SR</small></div><div><b>${o.g||0}</b><small>God packs</small></div>`:''}</div>${extra||''}</div>`;
 let ok=null;
-function draw(){
-  const fr=store.get(FR,[]);
+const bh=()=>store.get(BH,[]);
+const rec=code=>bh().filter(h=>h.f===code).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
+function resolve(l){
+  const me=myId(),mb=store.get(BT,[]),h=bh();
+  l.forEach(f=>{f.pend=null;f.wait=null;if(!f.code||!f.bt)return;
+    f.bt.forEach(e=>{if(e.to!==me)return;const m=mb.find(x=>x.id===e.id);
+      if(m){if(!h.some(x=>x.id===e.id)){h.unshift({id:e.id,f:f.code,fn:f.n,w:m.c.p>e.c.p?'W':m.c.p<e.c.p?'L':'N',m:m.c,o:e.c,t:Date.now()})}}
+      else f.pend=e});
+    mb.forEach(m=>{if(m.to===f.code&&!f.bt.some(e=>e.id===m.id))f.wait=m})});
+  h.length=Math.min(h.length,30);store.set(BH,h);
+}
+async function fight(f,ch){
+  if(busy)return;busy=true;
+  const id=ch?ch.s:setId,S0=sets.find(x=>x.id===id);
+  if(!S0){busy=false;return toast('Extension indisponible')}
+  const ov=document.createElement('div');ov.className='bt';ov.innerHTML='<div class="spin"></div>Ouverture du booster…';document.body.appendChild(ov);
+  try{
+    const cards=await(pre[id]||(pre[id]=loadSet(id)));
+    if(!cards.length||cards[0].gen)throw 0;
+    const pk=draw(cards,packSize(S0),is30(S0),isVint(S0));
+    const best=pk.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pk[0]),bv=val(best)||0;
+    const e={id:ch?ch.id:Math.random().toString(36).slice(2,8),to:f.code,s:id,c:{n:best.name,i:best.image,p:bv},t:Date.now()};
+    store.set(BT,[e,...store.get(BT,[]).filter(x=>x.id!==e.id)].slice(0,3));
+    let res='Défi envoyé à '+esc(f.n)+' ! Le résultat apparaîtra dès qu’il aura ouvert son booster.';
+    if(ch){const o=ch.c.p;res=bv>o?'🏆 Tu gagnes !':bv<o?'💀 Tu perds…':'🤝 Égalité';res+=`<br><small>${esc(best.name)} (${fmt(bv)}) contre ${esc(ch.c.n)} (${fmt(o)})</small>`}
+    ov.innerHTML=`<h1>${esc(S0.name||id)}</h1><div class="bg">${pk.map(c=>`<img class="${c===best?'bc':''}" src="${img(c,'low')}" alt="">`).join('')}</div><h2>Meilleure carte : ${esc(best.name)} · ${fmt(bv)}</h2><h2>${res}</h2><button class="cta" id="bx">OK</button>`;
+    document.getElementById('bx').onclick=()=>{ov.remove();socialScreen()};
+    push();
+  }catch(err){ov.remove();toast('Impossible d’ouvrir le booster')}
+  busy=false;
+}
+function paint(){
+  const fr=store.get(FR,[]),h=bh(),S0=sets.find(x=>x.id===setId),m=mine();
+  const lb=[{...m,me:1},...fr].sort((a,b)=>b.v-a.v);
   $.innerHTML=`<div class="soc"><h1>Amis</h1>
   <h2>Mon profil</h2>
   <input id="sn" maxlength="20" placeholder="Ton pseudo" value="${esc(name())}">
-  ${card(mine())}
+  ${card(m)}
   <p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne':''}</p>
   <button class="cta" id="sc">Copier mon code</button>
   <button class="lnk" id="ss">Partager mon code</button>
   <h2>Ajouter un ami</h2>
   <input id="si" placeholder="Code de ton ami" autocapitalize="characters">
   <button class="cta" id="sa">Ajouter</button>
-  <h2>Mes amis (${fr.length})</h2>
-  ${fr.length?fr.map((f,i)=>card(f,`<small>${f.code?'Mis à jour':'Instantané'} le ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small><button class="lnk" data-del="${i}">Retirer</button>`)).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div>`;
+  ${fr.length?`<h2>Classement (valeur)</h2>${lb.map((o,i)=>`<div class="lb${o.me?' me':''}"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc(o.n)}</span><b>${fmt(o.v)}</b></div>`).join('')}`:''}
+  <h2>Combats de boosters</h2>
+  <p class="hint">Chacun ouvre un booster : la meilleure carte gagne. Extension utilisée pour défier : <b>${esc(S0?S0.name:'—')}</b> (change-la dans Boosters).</p>
+  ${h.length?h.slice(0,6).map(x=>`<div class="lb"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'} ${esc(x.fn)}</span><small>${esc(x.m.n)} ${fmt(x.m.p)} · ${esc(x.o.n)} ${fmt(x.o.p)}</small></div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
+  <h2>Mes amis (${fr.length})</h2><div class="fl">
+  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`<small>${f.code?'Mis à jour':'Instantané'} le ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
   const $n=document.getElementById('sn');
-  $n.onchange=async()=>{store.set(ME,{name:$n.value.trim()});await push();draw()};
+  $n.onchange=async()=>{store.set(ME,{name:$n.value.trim()});await push();paint()};
   const share=async fn=>{if(!name())return toast("Choisis d'abord un pseudo");ok=await push();fn(myId())};
   document.getElementById('sc').onclick=()=>share(async c=>{try{await navigator.clipboard.writeText(c);toast('Code copié !')}catch(e){prompt('Copie ton code :',c)}});
   document.getElementById('ss').onclick=()=>share(c=>{const t='Mon code PokéBooster : '+c;if(navigator.share)navigator.share({text:t}).catch(()=>{});else prompt('Copie ton code :',c)});
@@ -1363,17 +1416,19 @@ function draw(){
     try{let o,code=null;
       if(v.startsWith('PB1-'))o=dec(v);else{code=v.toUpperCase();if(code===myId())return toast("C'est ton propre code");o=await pull(code)}
       o.d=Date.now();if(code)o.code=code;
-      const l=store.get(FR,[]).filter(x=>code?x.code!==code:x.n!==o.n);l.unshift(o);store.set(FR,l);toast(o.n+' ajouté !');draw();
+      const l=store.get(FR,[]).filter(x=>code?x.code!==code:x.n!==o.n);l.unshift(o);store.set(FR,l);toast(o.n+' ajouté !');paint();
     }catch(e){toast('Code introuvable')}};
-  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=store.get(FR,[]);l.splice(+b.dataset.del,1);store.set(FR,l);draw()});
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=store.get(FR,[]);l.splice(+b.dataset.del,1);store.set(FR,l);paint()});
+  document.querySelectorAll('[data-fight]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");fight(fr[+b.dataset.fight],null)});
+  document.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");const f=fr[+b.dataset.resp];fight(f,f.pend)});
 }
 window.socialScreen=async function(){
-  draw();
+  paint();
   ok=name()?await push():null;
   const l=store.get(FR,[]);
   await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,o,{code:f.code,d:o.d||Date.now()})}catch(e){}}));
-  store.set(FR,l);
-  if(screen==='social'&&!(document.activeElement&&document.activeElement.tagName==='INPUT'))draw();
+  resolve(l);store.set(FR,l);
+  if(screen==='social'&&!document.querySelector('.bt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT'))paint();
 };
 })();
 </script>
