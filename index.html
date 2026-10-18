@@ -754,10 +754,11 @@ function focusScreen(){
 }
 
 function home(){
+  const IOS=document.documentElement.classList.contains('ios');
   {const v=vis();if(v.length&&!v.some(s=>s.id===setId))setId=v[0].id}
   $.innerHTML=`<div class="top"><img class="brand" data-h src="https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg" alt=""><h1 id="meta"></h1><div class="sub" id="meta2"></div></div>
   <div class="chips era">${ERAS.map(([k,t])=>`<button class="chip ${era===k?'on':''}" data-e="${k}">${t}</button>`).join('')}</div>
-  <div class="car" id="car">${vis().map(s=>packHTML(s)).join('')}</div>
+  <div class="car" id="car">${vis().map(s=>IOS?`<div class="pk" data-id="${s.id}" style="--ph:${hue(s.id)}"></div>`:packHTML(s)).join('')}</div>
   <div class="swh">Touche un booster pour le choisir</div><button class="lnk" id="rnd">🎲 Booster surprise</button>`;
   const car=document.getElementById('car'); let st,drag=null;
   document.querySelectorAll('.era .chip').forEach(b=>b.onclick=()=>{era=b.dataset.e;home()});
@@ -768,7 +769,10 @@ function home(){
     car.querySelectorAll('.pk').forEach(p=>{const r=p.getBoundingClientRect(),d=Math.abs(r.left+r.width/2-m);if(d<bd){bd=d;best=p}});
     if(best&&best.dataset.id!==setId){sfx.snap();pickSet(best.dataset.id)}},80)});
 
-  const io=new IntersectionObserver(es=>es.forEach(en=>{if(!en.isIntersecting)return;io.unobserve(en.target);loadArt(en.target.querySelector('.art'),en.target.dataset.id)}),{root:car,rootMargin:document.documentElement.classList.contains('ios')?'0px 350px':'0px 1500px'});
+  const fillPk=p=>{if(p.firstChild)return;const s=sets.find(x=>x.id===p.dataset.id);if(!s)return;const t=document.createElement('div');t.innerHTML=packHTML(s);p.innerHTML=t.firstElementChild.innerHTML;loadArt(p.querySelector('.art'),p.dataset.id)};
+  const io=new IntersectionObserver(es=>es.forEach(en=>{
+    if(IOS){if(en.isIntersecting)fillPk(en.target);else en.target.innerHTML='';return}
+    if(!en.isIntersecting)return;io.unobserve(en.target);loadArt(en.target.querySelector('.art'),en.target.dataset.id)}),{root:car,rootMargin:IOS?'0px 450px':'0px 1500px'});
   car.querySelectorAll('.pk').forEach(p=>io.observe(p));
   pickSet(setId,2);
 }
