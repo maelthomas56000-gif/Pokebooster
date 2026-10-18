@@ -1333,16 +1333,16 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.s
  body #nav{left:50%;right:auto;width:min(620px,calc(100% - 28px));transform:translateX(-50%)}
  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
  .stats{grid-template-columns:repeat(3,1fr)}
- .soc .fl{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+ .soc .xfl{display:grid;grid-template-columns:1fr 1fr;gap:4px}
  button,.row,.pk{cursor:pointer}
  #nav button:hover{filter:brightness(1.2)}
 }
-.soc .lb{margin:4px 16px;padding:10px 14px;border-radius:14px;background:#ffffff14;display:flex;justify-content:space-between;gap:8px}
-.soc .lb.me{outline:2px solid #ffd166}
-.bt{position:fixed;inset:0;z-index:50;background:rgba(8,6,24,.97);overflow:auto;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
-.bt .bg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:560px;width:100%}
-.bt .bg img{width:100%;border-radius:6px}
-.bt .bc{border:3px solid #ffd166;border-radius:10px}
+.soc .xlb{margin:4px 16px;padding:10px 14px;border-radius:14px;background:#ffffff14;display:flex;justify-content:space-between;gap:8px}
+.soc .xlb.me{outline:2px solid #ffd166}
+.xbt{position:fixed;inset:0;z-index:50;background:rgba(8,6,24,.97);overflow:auto;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.xbt .xbg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:560px;width:100%}
+.xbt .xbg img{width:100%;border-radius:6px}
+.xbt .xbc{border:3px solid #ffd166;border-radius:10px}
 </style>
 <script>
 (function(){
@@ -1371,7 +1371,7 @@ async function fight(f,ch){
   if(busy)return;busy=true;
   const id=ch?ch.s:setId,S0=sets.find(x=>x.id===id);
   if(!S0){busy=false;return toast('Extension indisponible')}
-  const ov=document.createElement('div');ov.className='bt';ov.innerHTML='<div class="spin"></div>Ouverture du booster…';document.body.appendChild(ov);
+  const ov=document.createElement('div');ov.className='xbt';ov.innerHTML='<div class="spin"></div>Ouverture du booster…';document.body.appendChild(ov);
   try{
     const cards=await(pre[id]||(pre[id]=loadSet(id)));
     if(!cards.length||cards[0].gen)throw 0;
@@ -1381,7 +1381,7 @@ async function fight(f,ch){
     store.set(BT,[e,...store.get(BT,[]).filter(x=>x.id!==e.id)].slice(0,3));
     let res='Défi envoyé à '+esc(f.n)+' ! Le résultat apparaîtra dès qu’il aura ouvert son booster.';
     if(ch){const o=ch.c.p;res=bv>o?'🏆 Tu gagnes !':bv<o?'💀 Tu perds…':'🤝 Égalité';res+=`<br><small>${esc(best.name)} (${fmt(bv)}) contre ${esc(ch.c.n)} (${fmt(o)})</small>`}
-    ov.innerHTML=`<h1>${esc(S0.name||id)}</h1><div class="bg">${pk.map(c=>`<img class="${c===best?'bc':''}" src="${img(c,'low')}" alt="">`).join('')}</div><h2>Meilleure carte : ${esc(best.name)} · ${fmt(bv)}</h2><h2>${res}</h2><button class="cta" id="bx">OK</button>`;
+    ov.innerHTML=`<h1>${esc(S0.name||id)}</h1><div class="xbg">${pk.map(c=>`<img class="${c===best?'xbc':''}" src="${img(c,'low')}" alt="">`).join('')}</div><h2>Meilleure carte : ${esc(best.name)} · ${fmt(bv)}</h2><h2>${res}</h2><button class="cta" id="bx">OK</button>`;
     document.getElementById('bx').onclick=()=>{ov.remove();socialScreen()};
     push();
   }catch(err){ov.remove();toast('Impossible d’ouvrir le booster')}
@@ -1400,11 +1400,11 @@ function paint(){
   <h2>Ajouter un ami</h2>
   <input id="si" placeholder="Code de ton ami" autocapitalize="characters">
   <button class="cta" id="sa">Ajouter</button>
-  ${fr.length?`<h2>Classement (valeur)</h2>${lb.map((o,i)=>`<div class="lb${o.me?' me':''}"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc(o.n)}</span><b>${fmt(o.v)}</b></div>`).join('')}`:''}
+  ${fr.length?`<h2>Classement (valeur)</h2>${lb.map((o,i)=>`<div class="xlb${o.me?' me':''}"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc(o.n)}</span><b>${fmt(o.v)}</b></div>`).join('')}`:''}
   <h2>Combats de boosters</h2>
   <p class="hint">Chacun ouvre un booster : la meilleure carte gagne. Extension utilisée pour défier : <b>${esc(S0?S0.name:'—')}</b> (change-la dans Boosters).</p>
-  ${h.length?h.slice(0,6).map(x=>`<div class="lb"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'} ${esc(x.fn)}</span><small>${esc(x.m.n)} ${fmt(x.m.p)} · ${esc(x.o.n)} ${fmt(x.o.p)}</small></div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
-  <h2>Mes amis (${fr.length})</h2><div class="fl">
+  ${h.length?h.slice(0,6).map(x=>`<div class="xlb"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'} ${esc(x.fn)}</span><small>${esc(x.m.n)} ${fmt(x.m.p)} · ${esc(x.o.n)} ${fmt(x.o.p)}</small></div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
+  <h2>Mes amis (${fr.length})</h2><div class="xfl">
   ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`<small>${f.code?'Mis à jour':'Instantané'} le ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
   const $n=document.getElementById('sn');
   $n.onchange=async()=>{store.set(ME,{name:$n.value.trim()});await push();paint()};
@@ -1428,7 +1428,7 @@ window.socialScreen=async function(){
   const l=store.get(FR,[]);
   await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,o,{code:f.code,d:o.d||Date.now()})}catch(e){}}));
   resolve(l);store.set(FR,l);
-  if(screen==='social'&&!document.querySelector('.bt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT'))paint();
+  if(screen==='social'&&!document.querySelector('.xbt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT'))paint();
 };
 })();
 </script>
