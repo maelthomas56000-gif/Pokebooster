@@ -969,7 +969,7 @@ function collRows(){
   if(csort==='az')rows.sort((a,b)=>a.s.name.localeCompare(b.s.name));
   else if(csort==='prog')rows.sort((a,b)=>(b.o?b.o/b.n:-1)-(a.o?a.o/a.n:-1));
   return rows.length?rows.map(({s,n,o})=>{const pc=n?Math.min(100,Math.round(100*o/n)):0,ok=n&&o>=n;
-    return `<div class="row" data-id="${s.id}" style="--rh:${hue(s.id)}" onclick="setView('${s.id}')"><div class="lgb">${s.logo?`<img data-h src="${s.logo}.png" alt="">`:'<i class="ph0"></i>'}</div><div class="t"><b>${esc(s.name)}</b><small>${o} / ${n||'?'} cartes</small><div class="bar"><i style="width:${pc}%"></i></div></div><em>${ok?'✓ ':''}${pc}%</em><button class="chip pbtn" aria-label="Ouvrir un booster ${esc(s.name)}" onclick="event.stopPropagation();openFromSet('${s.id}','list')">Ouvrir</button></div>`}).join('')
+    return `<div class="row${ok?' done':''}" data-id="${s.id}" style="--rh:${hue(s.id)}" onclick="setView('${s.id}')"><div class="lgb">${s.logo?`<img data-h src="${s.logo}.png" alt="">`:'<i class="ph0"></i>'}</div><div class="t"><b>${esc(s.name)}</b><small>${o} / ${n||'?'} cartes</small><div class="bar"><i style="width:${pc}%"></i></div></div><em>${ok?'COMPLET':pc+'%'}</em><button class="chip pbtn" aria-label="Ouvrir un booster ${esc(s.name)}" onclick="event.stopPropagation();openFromSet('${s.id}','list')">Ouvrir</button></div>`}).join('')
     :'<p class="empty">Aucune extension ne correspond.</p>';
 }
 function collection(){
@@ -2330,6 +2330,21 @@ window.settingsScreen=function(){prev.apply(this,arguments);try{
   linear-gradient(105deg,transparent 38%,rgba(255,255,255,.3) 50%,transparent 62%);
  background-size:100% 100%,300% 100%;background-position:0 0,var(--mx,50%) 0;animation:none}
 .zc:not(.holo) .sh{opacity:.55}
+
+/* v31 : réactivité tactile, transitions plus courtes, holo léger par défaut */
+html{-webkit-tap-highlight-color:transparent}
+button,.chip,.row,.g,.cta,.back,#nav button,.pk{touch-action:manipulation}
+.row,.chip,.cta,.back{transition:transform .14s ease,opacity .14s,background-color .2s,box-shadow .2s}
+.row:active,.chip:active,.cta:active,.g:active,.back:active{transform:scale(.97)}
+.fd>*:not(.swh){animation-duration:.18s}
+html body .row.done{border-color:rgba(255,196,50,.8);box-shadow:0 0 0 1px rgba(255,196,50,.55),0 4px 14px var(--sh)}
+html body .row.done em{color:var(--gold);font-weight:800;letter-spacing:.06em;font-size:12px}
+/* sans mode de fusion (mode Fluide par défaut, iOS) : reflet et foil en simple transparence, bien plus léger */
+html.lite .zc .hf,html.ios .zc .hf,html.lite .sc .hf,html.ios .sc .hf{mix-blend-mode:normal!important;opacity:calc(var(--gi,.8)*.2)}
+html.lite .zc .sh,html.ios .zc .sh,html.lite .sc.holo .shine,html.ios .sc.holo .shine{mix-blend-mode:normal!important;
+ background:radial-gradient(circle at var(--mx,50%) var(--my,45%),rgba(255,255,255,.34),rgba(255,255,255,.08) 32%,transparent 58%),
+  linear-gradient(105deg,transparent 40%,rgba(255,255,255,.16) 50%,transparent 60%);
+ background-size:100% 100%,300% 100%;background-position:0 0,var(--mx,50%) 0}
 </style>
 </body>
 </html>
