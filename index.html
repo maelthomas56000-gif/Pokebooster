@@ -882,7 +882,7 @@ async function tearOpen(p,pts){
 function reveal(){
   const c=pack[idx], last=idx===pack.length-1;
   const run=pack.slice(0,idx+1).reduce((s,x)=>s+(val(x)||0),0), v=val(c);
-  const card=(x,k)=>x?`<div class="sc k${k} ${RANK[x.tier]>=3||x.rev?'holo':''} ${RANK[x.tier]>=4?'fa':''}" ${k?'':'id="top"'}><img src="${img(x,'high')}" alt="${esc(x.name)}"><div class="shine"></div>${k===0&&(RANK[x.tier]>=3||x.rev)?`<img class="rl rA" data-h src="${img(x,'high')}" alt=""><img class="rl rB" data-h src="${img(x,'high')}" alt="">`:''}</div>`:'';
+  const card=(x,k)=>x?`<div class="sc k${k} ${RANK[x.tier]>=3||x.rev?'holo':''} ${RANK[x.tier]>=4?'fa':''}" ${k?'':'id="top"'}><img src="${img(x,'high')}" alt="${esc(x.name)}"><div class="shine"></div>${k===0&&(RANK[x.tier]>=3||x.rev)?`<div class="hf"></div><div class="gt"></div>`:''}</div>`:'';
   $.innerHTML=`${GOD?'<div class="gpb">✦ GOD PACK ✦</div>':''}<div class="dots">${pack.map((_,i)=>`<i class="${i<idx?'d':''} ${i===idx?'cur':''} ${i===pack.length-1?'last':''}"></i>`).join('')}</div>
   <div class="tot pv">Valeur du booster<b>${fmt(run)}</b></div>
   <div class="stage"><div class="stack" id="stk" style="--tc:${tc(c)}">${card(pack[idx+2],2)}${card(pack[idx+1],1)}${card(c,0)}</div>
@@ -922,7 +922,7 @@ function zoom(c){
   const r=RANK[c.tier], gi=r>=4?1:r>=3?.8:r>=2?.6:c.rev?.5:.25, u=img(c,'high'), foil=r>=2||c.rev;
   const d=document.createElement('div'); d.className='lb'; d.style.setProperty('--tc',tc(c));
   d.innerHTML=`<button class="x" onclick="this.parentNode.remove()">✕</button>
-  <div class="pers"><div class="tilt zc ${r>=4?'fa':''}" style="--gi:${gi}"><img src="${u}" alt="${esc(c.name)}">${foil?`<img class="rl rA" data-h src="${u}" alt=""><img class="rl rB" data-h src="${u}" alt=""><div class="hf"></div>`:''}<div class="sh"></div><div class="rim"></div></div></div>
+  <div class="pers"><div class="tilt zc ${r>=4?'fa':''}" style="--gi:${gi}"><img src="${u}" alt="${esc(c.name)}">${foil?`<div class="hf"></div><div class="gt"></div>`:''}<div class="sh"></div><div class="rim"></div></div></div>
   <span class="bd">${esc(label(c))}</span><div class="px pv">${fmt(c.price??val(c))}</div><div class="hint">Bouge ton doigt sur la carte ✨</div>`;
   d.onclick=e=>{if(!e.target.closest('.tilt')&&!e.target.closest('.x'))d.remove()}; document.body.appendChild(d);sfx.zoom();
   tlReg(d.querySelector('.tilt'));
@@ -2306,6 +2306,30 @@ window.settingsScreen=function(){prev.apply(this,arguments);try{
 .inf b{width:14px;height:14px;border-radius:50%;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:8.5px;flex:none}
 .inf .pb{margin-left:auto;width:13px;height:13px;border-radius:50%;border:1.5px solid rgba(255,255,255,.85);background:linear-gradient(transparent 44%,rgba(255,255,255,.85) 44% 56%,transparent 56%);flex:none}
 .pk .age,.pk .gl2{font-style:normal}
+
+/* v30 : brillance holo propre — reflet doux + foil arc-en-ciel discret + fines paillettes */
+.zc .rl,.sc .rl,.zc .tx,.zc .gl,.sc .gl{display:none!important}
+.zc .hf,.zc .gt,.zc .sh,.sc .hf,.sc .gt{position:absolute;inset:0;border-radius:inherit;pointer-events:none}
+/* zone éclairée : suit le doigt, la carte reste lisible */
+.zc .hf,.zc .gt,.sc .hf,.sc .gt{--lit:radial-gradient(ellipse 80% 66% at var(--mx,50%) var(--my,45%),#000 0,rgba(0,0,0,.4) 55%,rgba(0,0,0,.1) 100%);
+ -webkit-mask-image:var(--lit)!important;mask-image:var(--lit)!important}
+.zc:not(.fa) .hf,.zc:not(.fa) .gt,.sc:not(.fa) .hf,.sc:not(.fa) .gt{
+ -webkit-mask-image:var(--lit),linear-gradient(#0000 5%,#000 15%,#000 55%,#0000 63%)!important;mask-image:var(--lit),linear-gradient(#0000 5%,#000 15%,#000 55%,#0000 63%)!important;
+ -webkit-mask-composite:source-in!important;mask-composite:intersect!important}
+/* foil : dégradé arc-en-ciel qui glisse avec l'inclinaison */
+.zc .hf,.sc .hf{mix-blend-mode:soft-light;filter:none;opacity:min(1,calc(var(--gi,.8)*1.15));
+ background:repeating-linear-gradient(calc(112deg + var(--px,0)*28deg),#ff6fae 0,#ffd66b 12%,#86ffb4 24%,#6ad3ff 36%,#ab86ff 48%,#ff6fae 60%);
+ background-size:230% 230%;background-position:calc(var(--mx,50%)*1) calc(var(--my,50%)*1)}
+/* paillettes : fines, blanches, elles scintillent quand on bouge */
+.zc .gt,.sc .gt{opacity:min(1,calc(var(--gi,.8)*.95));
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 14 0 0 0 -9.6'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 14 0 0 0 -9.6'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");background-size:150px 150px,97px 97px;
+ background-position:calc(var(--px,0)*22px) calc(var(--py,0)*22px),calc(var(--px,0)*-31px + 40px) calc(var(--py,0)*-31px + 17px)}
+/* reflet spéculaire */
+.zc .sh,.sc.holo .shine{opacity:1;mix-blend-mode:overlay;
+ background:radial-gradient(circle at var(--mx,50%) var(--my,45%),rgba(255,255,255,.62),rgba(255,255,255,.16) 30%,transparent 58%),
+  linear-gradient(105deg,transparent 38%,rgba(255,255,255,.3) 50%,transparent 62%);
+ background-size:100% 100%,300% 100%;background-position:0 0,var(--mx,50%) 0;animation:none}
+.zc:not(.holo) .sh{opacity:.55}
 </style>
 </body>
 </html>
