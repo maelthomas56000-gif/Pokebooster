@@ -108,7 +108,7 @@ h2{margin:14px 16px 8px;font-size:16px}
 #fx{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9}
 .p{position:absolute;left:50%;top:45%;width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 12px var(--c);animation:pop .95s ease-out forwards}
 @keyframes pop{to{transform:translate(var(--x),var(--y)) scale(.2);opacity:0}}
-.flash{position:fixed;inset:0;background:#fff;opacity:0;animation:fl .6s}
+.flash{display:none}
 @keyframes fl{0%{opacity:.85}100%{opacity:0}}
 .lb{position:fixed;inset:0;background:#000d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:8}
 .pers{perspective:900px}
@@ -501,7 +501,7 @@ const genArt=c=>{const h=hue(c.setId||c.id||'x'),cl=t=>String(t||'').replace(/[<
 const img=(c,q='high')=>c.gen?genArt(c):c.rp&&c.ri>=0&&RPU[c.ri]?RPU[c.ri]:c.ni?(c.rp?(c.ri>=0?RPD[c.ri]:rpArt(c.name)):rgbImg(c.lid||String(c.id).split('-').pop())):`${c.image}/${q}.webp`;
 const val=c=>c.rev?(c.ph??c.p):(c.p??c.ph);
 const tc=c=>c.rev&&RANK[c.tier]<3?'#6ee7ff':(T[c.tier]||T.C)[1];
-const label=c=>c.rev?'Reverse holo':(c.rarity||(T[c.tier]||T.C)[0]);
+const label=c=>c.rev?'Reverse holo':((c.rarity&&!/^none$/i.test(c.rarity)&&c.rarity)||(T[c.tier]||T.C)[0]);
 const hue=id=>[...id].reduce((a,c)=>a*31+c.charCodeAt(0),7)%360;
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const totalValue=()=>Object.values(col).reduce((s,c)=>s+(c.price||0)*c.count,0);
@@ -642,13 +642,14 @@ async function loadSet(id){
 
 // Booster réaliste : taille variable, ordre d'ouverture réel (énergie → communes → peu communes → reverse → rare), taux réglable
 const isVint=s=>/^(base|gym|neo)/.test(s.id||'');
+const missP=()=>cfg.miss===true?100:Math.max(0,+cfg.miss||0);
 function drawNorm(cards,n=10,pika=false,vint=false){
   const PKU=c=>/pikachu/i.test(c.name),rgb=cards.filter(c=>c.ni&&!c.rp),rpl=cards.filter(c=>c.rp&&!(pika&&PKU(c))),pks=pika?cards.filter(c=>!c.ni&&!c.rp&&PKU(c)):[]; cards=cards.filter(c=>!c.ni&&!c.rp&&!(pika&&PKU(c)));
   const P={}; Object.keys(T).forEach(t=>P[t]=cards.filter(c=>c.tier===t));
   const used=new Set();
-  const one=(...ls)=>{for(const l of ls){let a=l.filter(c=>!used.has(c.id));if(cfg.miss){const m=a.filter(c=>!col[c.id]);if(m.length)a=m}if(a.length){const c=rnd(a);used.add(c.id);return c}}return null};
+  const one=(...ls)=>{for(const l of ls){let a=l.filter(c=>!used.has(c.id));if(cfg.miss&&Math.random()*100<missP()){const m=a.filter(c=>!col[c.id]);if(m.length)a=m}if(a.length){const c=rnd(a);used.add(c.id);return c}}return null};
   const M=cfg.luck,[a,b,c2]=lk(),order=['SR','UR','RH','R'];
-  const hit=()=>{if(rgb.length&&Math.random()<.004*M){const x=one(rgb);if(x)return x}const r=Math.random()*100,st=r<a?0:r<b?1:r<c2?2:3;return one(...order.slice(st).map(t=>P[t]),...order.slice(0,st).reverse().map(t=>P[t]),P.U,cards)};
+  const hit=()=>{if(cfg.miss&&Math.random()*100<missP()){const mm=[...P.SR,...P.UR,...P.RH,...P.R].filter(c=>!used.has(c.id)&&!col[c.id]);if(mm.length){const c=rnd(mm);used.add(c.id);return c}}if(rgb.length&&Math.random()<.004*M){const x=one(rgb);if(x)return x}const r=Math.random()*100,st=r<a?0:r<b?1:r<c2?2:3;return one(...order.slice(st).map(t=>P[t]),...order.slice(0,st).reverse().map(t=>P[t]),P.U,cards)};
   const out=[],big=n>=8,hasE=P.E.length>0&&(big||pika),rvN=big&&!vint?1:0,ex=n>=5&&Math.random()<Math.min(.6,(M-1)*.1)?1:0;
   const un=big?3:Math.max(1,Math.round((n-1)*.35));
   const co=Math.max(0,n-1-rvN-ex-un-(hasE?1:0)-(pika?1:0));
@@ -669,9 +670,10 @@ const fairDraw=fn=>{const o=[cfg.luck,cfg.gp,cfg.miss,cfg.rp];cfg.luck=1;cfg.gp=
 const pickW=(arr,k,w)=>{const a=[...arr],o=[];while(o.length<k&&a.length){const tot=a.reduce((s,c)=>s+w(c),0);let r=Math.random()*tot,i=0;for(;i<a.length-1;i++){r-=w(a[i]);if(r<=0)break}o.push(a.splice(i,1)[0])}return o};
 function drawGod(all,n,pika){
   const PKU=c=>/pikachu/i.test(c.name),base=all.filter(c=>!c.ni&&!c.rp),k=n-(pika?1:0);
-  const pool=base.filter(c=>RANK[c.tier]>=2&&!(pika&&PKU(c)));
+  let pool=base.filter(c=>RANK[c.tier]>=3&&!(pika&&PKU(c)));
+  if(pool.length<k)pool=base.filter(c=>RANK[c.tier]>=2&&!(pika&&PKU(c)));
   if(pool.length<k) return null;
-  const out=pickW(pool,k,c=>({R:3,RH:4,UR:2.5,SR:1.2})[c.tier]||1).sort((a,b)=>RANK[a.tier]-RANK[b.tier]||Math.random()-.5);
+  const out=pickW(pool,k,c=>({R:.3,RH:2,UR:6,SR:5})[c.tier]||1).sort((a,b)=>RANK[a.tier]-RANK[b.tier]||Math.random()-.5);
   if(pika){const pks=base.filter(PKU),ne=pks.filter(c=>!/\bex\b/i.test(c.name)),p=rnd(ne.length?ne:pks);if(p)out.push({...p,pk:true})}
   return out;
 }
@@ -798,7 +800,7 @@ function cutPolys(pts){
 
 async function tearOpen(p,pts){
   if(busy) return; const id=p.dataset.id;
-  if(TY&&tyc.money<(packPrice(id)??0)-1e-9){p.style.animationPlayState='';toast('Pas assez d’argent pour ce booster.');return}
+  if(TY&&!(tyc.etb>0)&&tyc.money<(packPrice(id)??0)-1e-9){p.style.animationPlayState='';toast('Pas assez d’argent pour ce booster.');return}
   busy=true;
   if(!pts||pts.length<2) pts=[[-12,50],[202,50]];
   p.style.animationPlayState='paused';
@@ -831,9 +833,9 @@ async function tearOpen(p,pts){
     pack.forEach(c=>c.isNew=!col[c.id]);
     pack.forEach(c=>{try{new Image().src=img(c,'high')}catch(e){}});
     packVal=pack.reduce((s,c)=>s+(val(c)||0),0);
-    if(!BATTLE&&(!TY||tyc.keep)) pack.forEach(c=>{const o=col[c.id];col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:c.rarity,tier:c.tier,price:(c.o?(c.o[0]??c.o[1]):(c.p??c.ph))??o?.price??null,count:(o?.count||0)+1}});
-    if(TY){const pr=packPrice(id),mx=pack.reduce((m,c)=>Math.max(m,val(c)||0),0);tycPay={cost:pr,rev:packVal};tyc.money+=packVal-pr;tyc.life+=packVal;tyc.run+=packVal;tyc.packs++;if(mx>tyc.best)tyc.best=mx;saveT()}
-    if(!BATTLE){stats.packs++;
+    if(!BATTLE&&(!TY||tyc.keep)) pack.forEach(c=>{const o=col[c.id];col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:(c.o?(c.o[0]??c.o[1]):(c.p??c.ph))??o?.price??null,count:(o?.count||0)+1}});
+    if(TY){const pr=tyc.etb>0?0:packPrice(id),mx=pack.reduce((m,c)=>Math.max(m,val(c)||0),0);tycPay={cost:pr,rev:packVal};tyc.money+=packVal-pr;tyc.life+=packVal;tyc.run+=packVal;tyc.packs++;if(tyc.etb>0)tyc.etb--;if(mx>tyc.best)tyc.best=mx;saveT()}
+    if(!BATTLE){stats.packs++;{const k=typeof id==='string'?id:setId;stats.bs=stats.bs||{};stats.bs[k]=(stats.bs[k]||0)+1}
     {const d=n=>{const t=new Date();t.setDate(t.getDate()-n);return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()},td=d(0);
      if(stats.last!==td){stats.streak=stats.last===d(1)?(stats.streak||0)+1:1;stats.last=td;stats.bst=Math.max(stats.bst||0,stats.streak)}
      (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+1}
@@ -972,7 +974,7 @@ function achHTML(own,tot,by){
     ['Doublons','♻️',tot-own.length,[10,100,1000,10000,100000],n=>nf(n)+' doublons'],
     ['Cartes rares ou mieux','💎',hi,[10,100,500,1000,5000,10000],n=>nf(n)+' rares'],
     ['Ultra rares & secrètes','🌟',sr,[1,10,50,100,500,1000,5000],n=>nf(n)+' ultra rares'],
-    ['God Packs','✦',stats.gods||0,[1,3,5,10,25,50,100],n=>nf(n)+' God Pack'+(n>1?'s':'')],
+    ['God Packs (taux normal)','✦',stats.gn||0,[1,3,5,10,25,50,100],n=>nf(n)+' God Pack'+(n>1?'s':'')],
     ['Extensions complètes','🏆',dn,[1,3,5,10,25,50,100].filter(x=>x<=Math.max(1,Math.floor(maxS*.5))),n=>nf(n)+' complète'+(n>1?'s':'')],
     ['Extensions explorées','🧭',ex,[...[1,5,10,25,50,100,200].filter(x=>x<maxS),maxS].filter((x,i,a)=>x>0&&a.indexOf(x)===i),n=>n>=maxS?'Toutes les extensions':nf(n)+' extensions'],
     ['Jours d’affilée','🔥',bst,[2,3,7,14,30,60,100,365],n=>nf(n)+' jours'],
@@ -1010,7 +1012,7 @@ const cv=c=>{const v=val(c);return v!=null?v:(FB[c.tier]??.05)};
 const fm=n=>n>=1e9?(n/1e9).toLocaleString('fr-FR',{maximumFractionDigits:2})+' Md €':n>=1e6?(n/1e6).toLocaleString('fr-FR',{maximumFractionDigits:2})+' M €':n>=1e5?Math.round(n).toLocaleString('fr-FR')+' €':fmt(n);
 const sellMult=()=>1+.08*tyc.lv.sell+.25*tyc.star;
 const mktMult=s=>{const d=new Date(),k=d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()+eraOf(s);let h=0;for(const ch of k)h=(h*31+ch.charCodeAt(0))>>>0;return .8+((h%1000)/1000)*.5};
-const basePrice=id=>tyc.ev[id]?Math.max(.5,Math.round(tyc.ev[id]*80)/100):null;
+const basePrice=id=>tyc.ev[id]?Math.max(.5,Math.round(tyc.ev[id]*50)/100):null;
 const packPrice=id=>{const b=basePrice(id);return b==null?null:Math.max(.25,Math.round(b*(1-.02*tyc.lv.neg)*100)/100)};
 const prestigeGoal=()=>25000*Math.pow(3,tyc.star);
 let tycPay=null,tbusy=false,ttab='shop',tpick=false,tq='',tera='all',tcards={};
@@ -1034,7 +1036,7 @@ function tycRun(id,n){
     const pack=draw(cards,sz,pk,vi);if(GOD)gods++;
     for(const c of pack){
       const v=cv(c)*mult,o=col[c.id],isN=tyc.keep&&!o;nc++;rev+=v;
-      if(tyc.keep){if(isN)nw++;col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:c.rarity,tier:c.tier,price:c.p??c.ph??o?.price??null,count:(o?.count||0)+1}}
+      if(tyc.keep){if(isN)nw++;col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:c.p??c.ph??o?.price??null,count:(o?.count||0)+1}}
       if(RANK[c.tier]>=2||isN||v>=1)top.push([c,v,isN]);
       if(top.length>60){top.sort((a,b)=>b[1]-a[1]);top.length=12}
     }
@@ -1043,7 +1045,7 @@ function tycRun(id,n){
   top.sort((a,b)=>b[1]-a[1]);top.length=Math.min(top.length,12);
   {const d=k=>{const t=new Date();t.setDate(t.getDate()-k);return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()},td=d(0);
    if(stats.last!==td){stats.streak=stats.last===d(1)?(stats.streak||0)+1:1;stats.last=td;stats.bst=Math.max(stats.bst||0,stats.streak)}
-   (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+n;stats.gods=(stats.gods||0)+gods}
+   (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+n;stats.gods=(stats.gods||0)+gods;stats.gn=(stats.gn||0)+gods}
   const cost=Math.round(price*n*100)/100;
   tyc.money+=rev-cost;tyc.life+=rev;tyc.run+=rev;tyc.packs+=n;
   if(top[0]&&top[0][1]>tyc.best)tyc.best=top[0][1];
@@ -1056,7 +1058,7 @@ function tycDraw(cards,S0){
   const m=sellMult()*mktMult(S0);
   return pk.map(c=>{const v=cv(c)*m;return{...c,o:[c.p??null,c.ph??null],p:v,ph:v}});
 }
-function tycPlay(){const id=tyc.set;if(!id||!tcards[id])return;if(tyc.money<packPrice(id)-1e-9){toast('Pas assez d’argent.');return}
+function tycPlay(){const id=tyc.set;if(!id||!tcards[id])return;if(!(tyc.etb>0)&&tyc.money<packPrice(id)-1e-9){toast('Pas assez d’argent.');return}
   TY=true;fromSet=false;tycPay=null;pickSet(id);go('focus')}
 async function tycBuy(n){
   const id=tyc.set;if(tbusy||!id)return;tbusy=true;
@@ -1094,7 +1096,7 @@ function tycPrestige(){
   const keep={star:tyc.star+1,life:tyc.life,packs:tyc.packs,set:tyc.set,keep:tyc.keep,ev:tyc.ev,best:tyc.best};
   tyc=Object.assign(TY0(),keep);saveT();ttab='shop';tycoon();toast('★ Nouvelle étoile ! Tes ventes sont maintenant plus rentables.');
 }
-function tycRescue(){tyc.money+=5;saveT();tycoon()}
+function tycRescue(){tyc.money+=Math.max(5,Math.round((packPrice(tyc.set)||0)*1.5));saveT();tycoon()}
 // Employés : ouvrent des boosters tout seuls (tant que le jeu est ouvert)
 setInterval(async()=>{
   const e=tyc.lv.emp,id=tyc.set;if(!e||!id||tbusy||!tcards[id])return;
@@ -1120,7 +1122,7 @@ function tycoon(){
       h+=`<div class="row tshop" style="--rh:${hue(id)}"><div class="lgb" style="width:84px">${S.logo?`<img data-h src="${S.logo}.png" alt="">`:'<i class="ph0"></i>'}</div><div class="t"><b>${esc(S.name)}</b><small>${ready?`Booster : <b>${fm(price)}</b>`:'Chargement de l’extension…'}</small><small>Cote du jour : <b style="color:${mk>=1?'#17b890':'#e0674f'}">×${mk.toFixed(2).replace('.',',')}</b></small></div><button class="chip" id="tch">Changer</button></div>
       ${ready?`<div class="tqty">${bl.map(n=>`<button class="chip" data-n="${n}" ${tyc.money<price*n-1e-9?'disabled':''}><b>×${nf(n)}</b><small>${n===1?'en direct · ':''}${fm(price*n)}</small></button>`).join('')}<button class="chip" data-n="${maxA}" ${maxA<1?'disabled':''}><b>Max</b><small>${nf(Math.min(maxA,bl[bl.length-1]))}</small></button></div>`:'<div class="center" style="padding:24px"><div class="spin"></div></div>'}
       <div class="row st"><div class="t"><b>Ajouter à ma collection</b><small>Toutes les cartes sont vendues. Si activé, elles sont aussi ajoutées à ta collection (comme en mode normal).</small></div><button class="chip ${tyc.keep?'on':''}" id="tkp">${tyc.keep?'Activé':'Désactivé'}</button></div>
-      ${tyc.money<Math.max(price||1,2)&&!tyc.lv.emp?`<button class="cta" id="tres">Petit boulot : +5 €</button>`:''}`;
+      ${tyc.money<Math.max(price||1,2)&&!tyc.lv.emp?`<button class="cta" id="tres">Petit boulot : +${fmt(Math.max(5,Math.round((packPrice(tyc.set)||0)*1.5)))}</button>`:''}`;
     }
   }else if(ttab==='up'){
     h+=Object.keys(UPG).map(k=>{const u=UPG[k],l=tyc.lv[k],mx=l>=u.max,c=upCost(k);
@@ -1191,10 +1193,10 @@ function setScreen(){
       return flt==='all'||(flt==='dup'?(m&&m.count>1):(flt==='own')===!!m)});
     return list.length?list.map(c=>{const m=col[c.id];return m
       ?`<div class="g" style="--i:0;--tc:${tc(m)}" onclick="zoomId('${c.id}')"><img src="${img(c)}" alt="${esc(c.name)}">${m.count>1?`<span class="badge">x${m.count}</span>`:''}</div>`
-      :`<div class="g miss"><img src="${img(c)}" alt="${esc(c.name)}"><i>${esc(c.lid)}</i></div>`}).join('')
+      :`<div class="g miss" onclick="zoomAny('${c.id}')"><img src="${img(c)}" alt="${esc(c.name)}"><i>${esc(c.lid)}</i></div>`}).join('')
       :'<p class="empty">Aucune carte ne correspond.</p>'};
   $.innerHTML=`<h1>${esc(s.name)}</h1>
-  <div class="sub">${o.length} / ${cards.length} cartes · ${Math.round(100*o.length/cards.length)} %<span class="pv"> · ${fmt(v)}</span></div>
+  <div class="sub">${o.length} / ${cards.length} cartes · ${Math.round(100*o.length/cards.length)} % · ${(stats.bs&&stats.bs[viewId])||0} booster${((stats.bs&&stats.bs[viewId])||0)>1?'s':''} ouvert${((stats.bs&&stats.bs[viewId])||0)>1?'s':''}<span class="pv"> · ${fmt(v)}</span></div>
   <input class="srch" id="sq" type="search" placeholder="Rechercher une carte ou un numéro" value="${esc(sq)}" autocomplete="off" enterkeyhint="search">
   <button class="cta" style="margin:4px 0 10px;width:100%" onclick="openFromSet(viewId)">Ouvrir un booster de cette extension</button>
   <div class="chips" style="overflow-x:auto;flex-wrap:nowrap">${[['all','Toutes'],['own','Possédées'],['miss','Manquantes'],['dup','Doublons']].map(([k,t])=>`<button class="chip ${flt===k?'on':''}" onclick="flt='${k}';setScreen()">${t}</button>`).join('')}</div>
@@ -1210,7 +1212,7 @@ function settingsScreen(){
   <h2>Taux de drop</h2>
   <div class="row st"><div class="t"><b>Cartes rares <em id="lkv">×${cfg.luck}</em></b><small id="lkd">Rare holo ou mieux : ${c} % · Ultra rare+ : ${b} % · Secrète : ${a} %</small><input type="range" id="lkr" min="1" max="6" step=".5" value="${cfg.luck}"></div></div>
   <div class="row st"><div class="t"><b>God Pack <em id="gpv">${cfg.gp} %</em></b><small>Chance qu'un booster soit entièrement composé de cartes rares ou mieux. 0 % = jamais.</small><input type="range" id="gpr" min="0" max="10" step="1" value="${Math.max(0,GPV.findIndex(v=>v>=cfg.gp))}"></div></div>
-  <div class="row st"><div class="t"><b>Cartes qui me manquent</b><small>Privilégie les cartes que tu n'as pas encore</small></div><button class="chip ${cfg.miss?'on':''}" id="tm">${cfg.miss?'Activé':'Désactivé'}</button></div>
+  <div class="row st"><div class="t"><b>Cartes qui me manquent</b><small>Privilégie les cartes que tu n'as pas encore</small></div><button class="chip ${cfg.miss?'on':''}" id="tm">${cfg.miss?'Activé':'Désactivé'}</button></div>${cfg.miss?`<div class="row st"><div class="t"><b>Force <em id="mpv">${missP()} %</em></b><small>Chance de privilégier une carte manquante, y compris une rare manquante dans le slot rare.</small><input type="range" id="mpr" min="10" max="100" step="10" value="${missP()}"></div></div>`:''}
   <div class="row st"><div class="t"><b>Thème</b><small>Clair doux ou sombre</small></div><button class="chip on" id="tt">${cfg.theme==='dark'?'Sombre':'Clair'}</button></div>
   <div class="row st"><div class="t"><b>Afficher les prix</b><small>Valeur des cartes et de la collection</small></div><button class="chip ${cfg.prices?'on':''}" id="tp">${cfg.prices?'Activé':'Désactivé'}</button></div>
   <div class="row st"><div class="t"><b>Reprints 30th</b><small>Petite chance d'avoir une carte Classic Collection dans un booster 30th Celebration</small></div><button class="chip ${cfg.rp?'on':''}" id="tr">${cfg.rp?'Activé':'Désactivé'}</button></div>
@@ -1227,7 +1229,7 @@ function settingsScreen(){
   document.getElementById('lkr').oninput=e=>{cfg.luck=+e.target.value;saveCfg();const [a,b,c]=lk();document.getElementById('lkv').textContent='×'+cfg.luck;document.getElementById('lkd').textContent=`Rare holo ou mieux : ${c} % · Ultra rare+ : ${b} % · Secrète : ${a} %`;sfx.snap()};
   document.getElementById('vol').oninput=e=>{cfg.vol=+e.target.value;saveCfg();sfx.tap()};
   document.getElementById('gpr').oninput=e=>{cfg.gp=GPV[+e.target.value];saveCfg();document.getElementById('gpv').textContent=cfg.gp+' %';sfx.snap()};
-  document.getElementById('tm').onclick=()=>{cfg.miss=!cfg.miss;saveCfg();settingsScreen()};
+  document.getElementById('tm').onclick=()=>{cfg.miss=cfg.miss?false:60;saveCfg();settingsScreen()};{const mp=document.getElementById('mpr');if(mp)mp.oninput=e=>{cfg.miss=+e.target.value;saveCfg();document.getElementById('mpv').textContent=cfg.miss+' %'}};
   document.getElementById('tt').onclick=()=>{cfg.theme=cfg.theme==='dark'?'light':'dark';saveCfg();applyTheme();settingsScreen()};
   document.getElementById('tr').onclick=()=>{cfg.rp=!cfg.rp;saveCfg();settingsScreen()};
   document.getElementById('tp').onclick=()=>{cfg.prices=!cfg.prices;saveCfg();document.body.classList.toggle('np',!cfg.prices);settingsScreen()};
@@ -1303,6 +1305,20 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.s
 
 
 <style>
+@keyframes xtw{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes xgs{0%{background-position:130% 0}100%{background-position:-30% 0}}
+@keyframes xau{0%{box-shadow:0 0 0 2px #ffe14d,0 0 22px 4px rgba(255,210,70,.7),0 0 50px 10px rgba(255,160,0,.3)}100%{box-shadow:0 0 0 3px #fff3a0,0 0 38px 10px rgba(255,220,90,.95),0 0 90px 24px rgba(255,170,0,.55)}}
+.sc .sp{position:absolute;width:7px;height:7px;border-radius:50%;background:radial-gradient(#fff,var(--fx,#ffe14d) 45%,transparent 72%);animation:xtw 1.6s infinite;pointer-events:none;z-index:6}
+.sc.gold::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;background:linear-gradient(115deg,transparent 28%,rgba(255,200,40,.38) 44%,rgba(255,255,255,.6) 50%,rgba(255,200,40,.38) 56%,transparent 72%);background-size:260% 100%;animation:xgs 2.4s infinite;mix-blend-mode:overlay}
+.sc.godc{animation:xau 1.5s infinite alternate}
+body.rbg-4{background:radial-gradient(circle at 50% 38%,#2b1550,#07040f 72%)!important}
+body.rbg-5{background:radial-gradient(circle at 50% 38%,#4d3600,#060300 72%)!important}
+body.rbg-4::after,body.rbg-5::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(1.6px 1.6px at 12% 22%,#fff,transparent),radial-gradient(1.2px 1.2px at 78% 14%,#fff,transparent),radial-gradient(1.8px 1.8px at 38% 68%,#fff,transparent),radial-gradient(1.2px 1.2px at 88% 58%,#fff,transparent),radial-gradient(1.4px 1.4px at 22% 88%,#fff,transparent),radial-gradient(1.6px 1.6px at 62% 40%,#fff,transparent),radial-gradient(1.2px 1.2px at 50% 8%,#fff,transparent),radial-gradient(1.4px 1.4px at 94% 90%,#fff,transparent);animation:xtw 3.2s infinite}
+img.xgr{filter:grayscale(1) brightness(.55)!important}
+.nv.fd{animation:xfd .22s ease-out}@keyframes xfd{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+button,.row,.g,.chip{touch-action:manipulation;transition:transform .12s,opacity .2s}button:active,.row:active,.g:active{transform:scale(.97)}
+.car{overflow-y:hidden}.pk .strip,.pk .shine{overflow:hidden;max-width:100%}
+html.ios .g.miss img{filter:grayscale(1) brightness(.35)!important}
 #nav button[data-t=soc]{position:relative}.xbd{position:absolute;top:0;right:10px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#ff4d6d;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
 @media (min-width:900px){
  #app{max-width:980px;margin-left:auto;margin-right:auto}
@@ -1323,16 +1339,18 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.s
 <script>
 (function(){
 const sc=c=>c.t!=null?c.t:c.p;
+const FV='fav_v1',BN='bind_v1';
+const favs=()=>store.get(FV,[]).filter(id=>col[id]);
 const ME='me_v1',FR='friends_v2',BT='bt_v1',BH='bh_v1',FK='AIzaSyBB84eer2Mh_lzwalbSfHAeevh9zDOOVdE';
 const BASE='https://firestore.googleapis.com/v1/projects/poke-3342a/databases/(default)/documents/players';
 const myId=()=>{let c=store.get('pid_v1',null);if(!c){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';c=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>A[x%A.length]).join('');store.set('pid_v1',c)}return c};
 const dec=s=>{s=(s||'').trim();if(!s.startsWith('PB1-'))throw 0;const o=JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));if(!o||typeof o.n!=='string')throw 0;return o};
 const name=()=>store.get(ME,{name:''}).name||'';
-const mine=()=>{const own=Object.values(col),b=stats.best;return {n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:b&&b.image?{n:b.name,i:b.image,p:b.price}:null,bt:store.get(BT,[]),v:3,d:Date.now()}};
+const mine=()=>{const own=Object.values(col),b=stats.best;return {n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:b&&b.image?{n:b.name,i:b.image,p:b.price}:null,bt:store.get(BT,[]),v:3,a:store.get('av_v1',''),f:favs().slice(0,4).filter(id=>col[id].image).map(id=>({n:col[id].name,i:col[id].image})),d:Date.now()}};
 let lastSig='';
-const push=async(force)=>{if(!name())return false;const m=mine(),sig=JSON.stringify({...m,d:0});if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>1800&&m.bt.length)m.bt.pop();try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{j:{stringValue:JSON.stringify(m)}}})});return r.ok}catch(e){lastSig='';return false}};
+const push=async(force)=>{if(!name())return false;const m=mine(),sig=JSON.stringify({...m,d:0});if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>1800&&(m.bt.length||m.f.length)){if(m.bt.length)m.bt.pop();else m.f.pop()}try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{j:{stringValue:JSON.stringify(m)}}})});return r.ok}catch(e){lastSig='';return false}};
 const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json();return JSON.parse(d.fields.j.stringValue)};
-const card=(o,extra)=>`<div class="pc"><div class="av" style="width:56px;height:56px;font-size:24px;background:hsl(${hue(o.n)} 55% 45%)">${esc((o.n[0]||'?').toUpperCase())}</div><b style="font-size:18px">${esc(o.n)}</b>${o.b?`<img class="fv" src="${esc(o.b.i)}/high.webp" alt="" onerror="this.remove()"><small>${esc(o.b.n)} · ${fmt(o.b.p)}</small>`:''}<div class="sg"><div><b>${o.p}</b><small>Boosters</small></div><div><b>${o.u}</b><small>Différentes</small></div><div><b>${o.t}</b><small>Total</small></div><div><b>${fmt(o.v)}</b><small>Valeur</small></div>${o.p?`<div><b>${fmt(o.v/o.p)}</b><small>Moy. / booster</small></div>`:''}${o.s!=null?`<div><b>${o.s} j</b><small>Série</small></div><div><b>${o.r||0}</b><small>Cartes UR/SR</small></div><div><b>${o.g||0}</b><small>God packs (taux normal)</small></div>`:''}</div>${o.o?((o.o.l>1||o.o.p>1||o.o.m)?`<small>⚠️ Options activées : chance ×${o.o.l} · God pack ${o.o.p} %${o.o.m?' · cartes manquantes':''}</small>`:'<small>✓ Taux de drop normaux</small>'):''}${extra||''}</div>`;
+const card=(o,extra)=>`<div class="pc"><div class="av" style="width:56px;height:56px;font-size:24px;${o.a?`background:url('${esc(o.a)}/low.webp') 50% 18%/cover`:`background:hsl(${hue(o.n)} 55% 45%)`}">${o.a?'':esc((o.n[0]||'?').toUpperCase())}</div><b style="font-size:18px">${esc(o.n)}</b>${o.b?`<img class="fv" src="${esc(o.b.i)}/high.webp" alt="" onerror="this.remove()"><small>${esc(o.b.n)} · ${fmt(o.b.p)}</small>`:''}<div class="sg"><div><b>${o.p}</b><small>Boosters</small></div><div><b>${o.u}</b><small>Différentes</small></div><div><b>${o.t}</b><small>Total</small></div><div><b>${fmt(o.v)}</b><small>Valeur</small></div>${o.p?`<div><b>${fmt(o.v/o.p)}</b><small>Moy. / booster</small></div>`:''}${o.s!=null?`<div><b>${o.s} j</b><small>Série</small></div><div><b>${o.r||0}</b><small>Cartes UR/SR</small></div><div><b>${o.g||0}</b><small>God packs (taux normal)</small></div>`:''}</div>${o.o?((o.o.l>1||o.o.p>1||o.o.m)?`<small>⚠️ Options activées : chance ×${o.o.l} · God pack ${o.o.p} %${o.o.m?' · cartes manquantes':''}</small>`:'<small>✓ Taux de drop normaux</small>'):''}${o.f&&o.f.length?`<div style="display:flex;gap:6px;justify-content:center;margin:6px 0">${o.f.map(x=>`<img src="${esc(x.i)}/low.webp" alt="" style="width:52px;border-radius:5px" onerror="this.remove()">`).join('')}</div><small>⭐ Cartes favorites</small>`:''}${extra||''}</div>`;
 let ok=null;
 const bh=()=>store.get(BH,[]);
 const rec=code=>bh().filter(h=>h.f===code).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
@@ -1373,6 +1391,7 @@ function paint(){
   <h2>Mon profil</h2>
   <input id="sn" maxlength="20" placeholder="Ton pseudo" value="${esc(name())}">
   ${card(m)}
+  <button class="lnk" id="sav">🖼️ Changer ma photo de profil</button>
   <p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne':''}</p>
   <button class="cta" id="sc">Copier mon code</button>
   <button class="lnk" id="ss">Partager mon code</button>
@@ -1385,6 +1404,7 @@ function paint(){
   ${h.length?h.slice(0,6).map(x=>`<div class="xlb" style="gap:8px;align-items:center"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'}</span>${hc(x.m,'Toi')}${hc(x.o,esc(x.fn))}</div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
   <h2>Mes amis (${fr.length})</h2><div class="xfl">
   ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`<small>${f.code?'Mis à jour':'Instantané'} le ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>${f.code&&f.v!==3?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
+  document.getElementById('sav').onclick=pickAv;
   const $n=document.getElementById('sn');
   $n.onchange=async()=>{store.set(ME,{name:$n.value.trim()});await push();paint()};
   const share=async fn=>{if(!name())return toast("Choisis d'abord un pseudo");ok=await push();fn(myId())};
@@ -1401,6 +1421,131 @@ function paint(){
   document.querySelectorAll('[data-fight]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");fight(fr[+b.dataset.fight],null)});
   document.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");const f=fr[+b.dataset.resp];fight(f,f.pend)});
 }
+const SIL=new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');SIL.loop=true;
+const unlock=()=>{try{SIL.play().catch(()=>{});const a=ac();if(a){a.resume&&a.resume();const b=a.createBuffer(1,1,22050),o=a.createBufferSource();o.buffer=b;o.connect(a.destination);o.start(0)}}catch(e){}};
+['touchstart','touchend','click'].forEach(e=>document.addEventListener(e,unlock,{passive:true}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){try{const a=ac();a&&a.resume&&a.resume()}catch(e){}}});
+function tint(el,src){const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=16;const x=c.getContext('2d');x.drawImage(im,0,0,16,16);const d=x.getImageData(0,0,16,16).data;let sa=0,sb=0;for(let i=0;i<d.length;i+=4){const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),t=mx-mn;if(t<.25||mx<.35)continue;let h=mx==r?((g-b)/t)%6:mx==g?(b-r)/t+2:(r-g)/t+4;h*=Math.PI/3;sa+=Math.cos(h)*t;sb+=Math.sin(h)*t}if(!sa&&!sb)return;const h=(Math.atan2(sb,sa)*180/Math.PI+360)%360;el.style.setProperty('--fx','hsl('+Math.round(h)+' 95% 62%)');if(h>=35&&h<=65)el.classList.add('gold')}catch(e){}};im.src=src}
+function decor(){const c=pack[idx];if(!c)return;const r=RANK[c.tier]||0,top=document.getElementById('top'),b=document.body.classList;
+  b.remove('rbg-4','rbg-5');if(r>=4)b.add('rbg-'+Math.min(r,5));
+  if(GOD)document.querySelectorAll('.sc').forEach(e=>e.classList.add('godc'));
+  if(!top)return;if(r>=5)top.classList.add('gold');
+  if(r>=4||GOD){const n=r>=5||GOD?18:11;for(let i=0;i<n;i++){const e=document.createElement('i');e.className='sp';e.style.cssText='left:'+Math.random()*96+'%;top:'+Math.random()*96+'%;animation-delay:'+Math.random()*2+'s';top.appendChild(e)}}
+  if(r>=3)tint(top,img(c,'high'))}
+const _rv=window.reveal;window.reveal=function(){_rv();try{decor()}catch(e){}};
+const _rd=window.render;window.render=function(){if(screen==='xcustom'&&XS){const nav=document.getElementById('nav')||mkNav();nav.style.display='flex';$.className='nv fd';nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t==='col'));window.scrollTo(0,0);XS();return}XS=null;if(!['focus','reveal','results'].includes(screen)){MULT=0;MTOT=0}_rd();applyX();if(screen!=='reveal')document.body.classList.remove('rbg-4','rbg-5')};
+const RATE={};
+async function rates(sid){if(RATE[sid])return RATE[sid];const cards=await(pre[sid]||(pre[sid]=loadSet(sid))),S0=sets.find(x=>x.id===sid);
+  if(!S0||!cards.length||cards[0].gen)return null;const cnt={},N=3000;
+  fairDraw(()=>{for(let i=0;i<N;i++){new Set(drawNorm(cards,packSize(S0),is30(S0),isVint(S0)).map(c=>c.id)).forEach(k=>cnt[k]=(cnt[k]||0)+1)}});
+  return RATE[sid]={cnt,N}}
+window.zoomAny=id=>{const c=cardsOf(B[viewId],viewId).find(x=>x.id===id);if(c)zoom(c)};
+let MULT=0,MSUM=0,MTOT=0,MLAST=null;
+const WK='wal_v1',wal=()=>store.get(WK,0),setWal=v=>store.set(WK,Math.round(v*100)/100);
+const _fs=window.focusScreen;window.focusScreen=function(){_fs();if(BATTLE||(TY&&!MULT))return;const w=$.querySelector('.swh');if(!w)return;
+  w.insertAdjacentHTML('beforebegin',MULT>0?`<div class="hint">${TY&&tyc.etb>0?'📦 ETB':'Série en cours'} : ${MTOT-MULT+1}/${MTOT}</div>`:'<div class="chips" id="xm" style="justify-content:center">'+[1,5,10].map(n=>`<button class="chip ${n===1?'on':''}" data-m="${n}">×${n}</button>`).join('')+'</div>');
+  document.querySelectorAll('#xm [data-m]').forEach(b=>b.onclick=()=>{const n=+b.dataset.m;MULT=n>1?n:0;MTOT=MULT;MSUM=0;MLAST=null;document.querySelectorAll('#xm .chip').forEach(x=>x.classList.toggle('on',x===b))})};
+const _rs=window.results;window.results=function(){_rs();if(BATTLE||!MTOT)return;
+  if(MLAST!==pack){MLAST=pack;MSUM+=pack.reduce((t,c)=>t+(val(c)||0),0);MULT--}
+  const done=MTOT-MULT;let h=`<div class="pc"><b>Série : ${done}/${MTOT} boosters</b><b style="font-size:20px">${fmt(MSUM)}</b><small>Valeur cumulée</small>${MULT>0?'<button class="cta" id="xnx">▶ Booster suivant</button>':'<small>Série terminée ✓</small>'}</div>`;
+  $.insertAdjacentHTML('afterbegin',h);const n=document.getElementById('xnx');if(n)n.onclick=()=>go('focus');if(MULT<=0){MTOT=0;MULT=0}};
+function trade(d,c){if(BATTLE||TY)return;const m=col[c.id],v=c.price??val(c);if(v==null||!(v>=0))return;
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;justify-content:center;margin:6px;flex-wrap:wrap';
+  const sell=Math.round(v*80)/100,buy=Math.round(v*125)/100;
+  row.innerHTML=`<small style="width:100%;text-align:center">💰 Portefeuille : ${fmt(wal())}</small>`+(m?`<button class="chip" id="xsl">Vendre 1 · +${fmt(sell)}</button>`:`<button class="chip" id="xby" ${wal()<buy?'disabled style="opacity:.45"':''}>Acheter · ${fmt(buy)}</button>`);
+  d.appendChild(row);
+  const done=()=>{store.set(KEY,col);lastSig='';d.remove();render()};
+  const sl=row.querySelector('#xsl');if(sl)sl.onclick=e=>{e.stopPropagation();if(m.count<2&&!confirm('Vendre ton dernier exemplaire ?'))return;setWal(wal()+sell);m.count--;if(m.count<1)delete col[c.id];toast('Vendue +'+fmt(sell));done()};
+  const by=row.querySelector('#xby');if(by)by.onclick=e=>{e.stopPropagation();if(wal()<buy)return;setWal(wal()-buy);col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:v,count:1};toast('Carte achetée !');done()}}
+function pickAv(){const o=document.createElement('div');o.className='xbt';let q='';
+  const ids=()=>Object.keys(col).filter(id=>col[id].image&&(!q||nrm(col[id].name).includes(nrm(q)))).slice(0,90);
+  const draw2=()=>{o.querySelector('#ag').innerHTML=ids().map(id=>`<div class="g" style="--i:0;--tc:${tc(col[id])}" data-a="${id}"><img src="${img(col[id])}" alt=""></div>`).join('')||'<p class="empty">Aucune carte.</p>';
+    o.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>{store.set('av_v1',col[e.dataset.a].image);lastSig='';o.remove();push(true);paint()})};
+  o.innerHTML='<h2>Choisis une carte comme photo</h2><input class="srch" id="aq" type="search" placeholder="Rechercher" style="max-width:420px"><div class="grid" id="ag"></div><button class="lnk" id="ac2">Annuler</button><button class="lnk" id="ar">Retirer la photo</button>';
+  document.body.appendChild(o);o.style.zIndex=70;draw2();
+  o.querySelector('#aq').oninput=e=>{q=e.target.value;draw2()};o.querySelector('#ac2').onclick=()=>o.remove();
+  o.querySelector('#ar').onclick=()=>{store.set('av_v1','');lastSig='';o.remove();push(true);paint()}}
+const THEMES=[['Classique'],['Minuit','dark',260,'#0f0d24'],['Océan','dark',200,'#08181f'],['Forêt','dark',140,'#0c1a12'],['Coucher de soleil','dark',18,'#1d0f12'],['Néon','dark',300,'#0a0516'],['Sakura','light',335,'#fbeef3'],['Sable','light',40,'#f6efe2']],XK='xth_v1';
+function applyX(){const r=document.documentElement.style,t=THEMES.find(x=>x[0]===store.get(XK,''));
+  if(!t||!t[1]){r.removeProperty('--h');r.removeProperty('--bg');return}
+  if(cfg.theme!==t[1]){store.set(XK,'');return applyX()}r.setProperty('--h',t[2]);r.setProperty('--bg',t[3])}
+applyX();
+const MK='mus_v1';let mus=null;
+function musStart(){const a=ac();if(!a||mus)return;const st=store.get(MK,{on:false,v:50});
+  const g=a.createGain();g.gain.value=0;g.gain.linearRampToValueAtTime(st.v/100*.14,a.currentTime+3);g.connect(a.destination);
+  const dl=a.createDelay(1.5);dl.delayTime.value=.46;const fb=a.createGain();fb.gain.value=.42;const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;dl.connect(lp);lp.connect(fb);fb.connect(dl);dl.connect(g);
+  const C=[[130.81,164.81,196,246.94],[110,130.81,164.81,196],[87.31,110,130.81,164.81],[98,123.47,146.83,164.81]],P=[523.25,587.33,659.25,783.99,880,1046.5];
+  const voice=(f,t,d,type,vol)=>{const o=a.createOscillator(),e=a.createGain();o.type=type;o.frequency.value=f;o.detune.value=Math.random()*10-5;e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(vol,t+d*.35);e.gain.linearRampToValueAtTime(0,t+d);o.connect(e);e.connect(g);e.connect(dl);o.start(t);o.stop(t+d+.1)};
+  let next=a.currentTime+.2,k=0;
+  const tick=()=>{while(next<a.currentTime+12){const ch=C[k++%4];ch.forEach(f=>voice(f,next,9,'sine',.5));ch.forEach(f=>voice(f*2,next+.2,8.5,'triangle',.14));for(let i=0;i<3;i++)voice(P[Math.floor(Math.random()*P.length)],next+1+Math.random()*6,2.6,'sine',.22);next+=8}};
+  tick();mus={g,iv:setInterval(tick,3000),a}}
+function musStop(){if(!mus)return;const{g,iv,a}=mus;clearInterval(iv);g.gain.cancelScheduledValues(a.currentTime);g.gain.setValueAtTime(g.gain.value,a.currentTime);g.gain.linearRampToValueAtTime(0,a.currentTime+1.2);mus=null}
+['touchend','click'].forEach(e=>document.addEventListener(e,()=>{if(store.get(MK,{}).on)musStart()},{passive:true}));
+const _st=window.settingsScreen;window.settingsScreen=function(){_st();const r=$.querySelector('.row.st');if(!r)return;
+  const cur=store.get(XK,'')||'Classique',m=store.get(MK,{on:false,v:50});
+  r.insertAdjacentHTML('beforebegin',`<div class="row st"><div class="t"><b>Thèmes</b><div class="chips" style="flex-wrap:wrap;margin-top:8px">${THEMES.map(t=>`<button class="chip ${cur===t[0]?'on':''}" data-x="${t[0]}">${t[0]}</button>`).join('')}</div></div></div>
+  <div class="row st"><div class="t"><b>Musique d'ambiance</b><small>Ambiance douce générée dans le jeu (nécessite le son activé)</small><input type="range" id="xmv" min="10" max="100" value="${m.v}"></div><button class="chip ${m.on?'on':''}" id="xmt">${m.on?'Activée':'Désactivée'}</button></div>`);
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const t=THEMES.find(x=>x[0]===b.dataset.x);store.set(XK,t[1]?t[0]:'');if(t[1]){cfg.theme=t[1];saveCfg();applyTheme()}applyX();settingsScreen()});
+  document.getElementById('xmt').onclick=()=>{const x=store.get(MK,{on:false,v:50});x.on=!x.on;store.set(MK,x);x.on?musStart():musStop();settingsScreen()};
+  document.getElementById('xmv').oninput=e=>{const x=store.get(MK,{on:false,v:50});x.v=+e.target.value;store.set(MK,x);if(mus)mus.g.gain.setTargetAtTime(x.v/100*.14,mus.a.currentTime,.2)}};
+const _ty=window.tycoon;window.tycoon=function(){_ty();const id=tyc.set;if(!id||!tcards[id])return;const p=packPrice(id),b0=$.querySelector('[data-n]');if(!p||!b0)return;
+  const left=tyc.etb>0;
+  b0.parentNode.insertAdjacentHTML('afterend',`<button class="cta" id="xetb" style="margin-top:10px">${left?`📦 Reprendre mon ETB (${tyc.etb} boosters restants)`:`📦 ETB : 9 boosters + 1 offert · ${fmt(9*p)}`}</button>`);
+  document.getElementById('xetb').onclick=()=>{if(!left){if(tyc.money<9*p-1e-9)return toast('Pas assez d’argent pour un ETB.');tyc.money-=9*p;tyc.etb=10;saveT()}MULT=tyc.etb;MTOT=tyc.etb;MSUM=0;MLAST=null;tycPlay()}};
+const GENS=[[1,151],[152,251],[252,386],[387,493],[494,649],[650,721],[722,809],[810,905],[906,1025]],DK='dex_v1';let dexList=store.get(DK,null),xg=0;
+async function dexLoad(){if(dexList&&dexList.length)return dexList;const r=await fetch('https://pokeapi.co/api/v2/pokemon-species?limit=1100');if(!r.ok)throw 0;const j=await r.json();dexList=j.results.map(x=>[+x.url.split('/').filter(Boolean).pop(),x.name]).sort((a,b)=>a[0]-b[0]);store.set(DK,dexList);return dexList}
+const dn=s=>' '+String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/♀/g,' f ').replace(/♂/g,' m ').replace(/[.':’]/g,'').replace(/[-_]/g,' ').replace(/\s+/g,' ').trim()+' ';
+function dexOwned(){const keys=dexList.map(([id,n])=>[id,dn(n.replace(/-(f|m)$/,''))]).sort((a,b)=>b[1].length-a[1].length),own={};
+  Object.values(col).forEach(c=>{const t=dn(c.name),k=keys.find(k=>t.includes(k[1]));if(k)own[k[0]]=(own[k[0]]||0)+c.count});return own}
+async function xDex(){
+  $.innerHTML='<div class="center"><div class="spin"></div></div>';
+  try{await dexLoad()}catch(e){$.innerHTML='<h1>📖 Pokédex</h1><p class="empty">Impossible de charger la liste des Pokémon (connexion ?).</p><button class="cta" id="rt">Réessayer</button><button class="lnk" onclick="go(\'collection\')">Retour</button>';document.getElementById('rt').onclick=()=>openX(xDex);return}
+  const own=dexOwned(),[a,b]=GENS[xg],list=dexList.filter(([id])=>id>=a&&id<=b),tot=Object.keys(own).length;
+  $.innerHTML=`<h1>📖 Pokédex</h1><div class="sub" style="text-align:center">${tot} / ${dexList.length} Pokémon obtenus</div>
+  <div class="chips" style="overflow-x:auto;flex-wrap:nowrap">${GENS.map((g,i)=>`<button class="chip ${i===xg?'on':''}" data-g="${i}">Gen ${i+1}</button>`).join('')}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;padding:8px 14px">${list.map(([id,n])=>`<div data-d="${id}" data-n="${esc(n)}" style="text-align:center;padding:6px 2px;border-radius:12px;background:#ffffff12;opacity:${own[id]?1:.3}"><img loading="lazy" decoding="async" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png" alt="" style="width:72px;height:72px;image-rendering:pixelated"><small style="display:block">#${id}${own[id]?' · ×'+own[id]:''}</small></div>`).join('')}</div>
+  <div class="grow"></div><button class="cta" onclick="go('collection')">Retour</button>`;
+  document.querySelectorAll('[data-g]').forEach(e=>e.onclick=()=>{xg=+e.dataset.g;openX(xDex)});
+  document.querySelectorAll('[data-d]').forEach(e=>e.onclick=()=>toast('#'+e.dataset.d+' '+e.dataset.n+(own[e.dataset.d]?' · '+own[e.dataset.d]+' carte(s)':' · pas encore obtenu')))}
+let XS=null,xi=0,xq='';
+const openX=fn=>{XS=fn;screen='xcustom';render()};
+const gc=id=>`<div class="g" style="--i:0;--tc:${tc(col[id])}" onclick="zoom(col['${id}'])"><img src="${img(col[id])}" alt=""></div>`;
+const binders=()=>store.get(BN,[]),saveB=b=>{store.set(BN,b);lastSig=''};
+function xFav(){const f=favs(),bs=binders();
+  $.innerHTML=`<h1>⭐ Favoris & classeurs</h1><h2>Favoris (${f.length})</h2><div class="grid">${f.length?f.map(gc).join(''):'<p class="empty">Ouvre une carte et appuie sur ☆.</p>'}</div>
+  <h2>Classeurs</h2>${bs.map((b,i)=>`<div class="xlb" style="cursor:pointer;margin:4px 0" data-b="${i}"><span>📁 ${esc(b.n)}</span><b>${b.ids.filter(id=>col[id]).length} cartes</b></div>`).join('')}
+  <button class="cta" id="nb" style="margin-top:10px">+ Nouveau classeur</button><div class="grow"></div><button class="lnk" onclick="go('collection')">Retour</button>`;
+  document.getElementById('nb').onclick=()=>{const n=(prompt('Nom du classeur ?')||'').trim().slice(0,24);if(n){saveB([...bs,{n,ids:[]}]);xFav()}};
+  document.querySelectorAll('[data-b]').forEach(e=>e.onclick=()=>{xi=+e.dataset.b;openX(xBind)})}
+function xBind(){const bs=binders(),b=bs[xi];if(!b)return openX(xFav);const ids=b.ids.filter(id=>col[id]);
+  $.innerHTML=`<h1>📁 ${esc(b.n)}</h1><div class="sub" style="text-align:center">${ids.length} cartes</div><div class="grid">${ids.length?ids.map(gc).join(''):'<p class="empty">Classeur vide.</p>'}</div>
+  <button class="cta" id="ad" style="margin-top:10px">Ajouter / retirer des cartes</button><button class="lnk" id="dl">Supprimer ce classeur</button><div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
+  document.getElementById('ad').onclick=()=>{xq='';openX(xPick)};
+  document.getElementById('dl').onclick=()=>{if(confirm('Supprimer ce classeur ?')){bs.splice(xi,1);saveB(bs);openX(xFav)}};
+  document.getElementById('bk').onclick=()=>openX(xFav)}
+function xPick(){const bs=binders(),b=bs[xi];if(!b)return openX(xFav);
+  const list=()=>Object.keys(col).filter(id=>!xq||nrm(col[id].name).includes(nrm(xq))).slice(0,90).map(id=>`<div class="g" style="--i:0;--tc:${tc(col[id])};${b.ids.includes(id)?'outline:3px solid #ffd166':''}" data-p="${id}"><img src="${img(col[id])}" alt=""></div>`).join('');
+  $.innerHTML=`<h1>Cartes de « ${esc(b.n)} »</h1><input class="srch" id="pq" type="search" placeholder="Rechercher une carte" value="${esc(xq)}"><div class="grid" id="pg">${list()}</div><div class="grow"></div><button class="cta" id="ok">Terminé</button>`;
+  const bind=()=>document.querySelectorAll('[data-p]').forEach(e=>e.onclick=()=>{const id=e.dataset.p;b.ids=b.ids.includes(id)?b.ids.filter(x=>x!==id):[...b.ids,id];saveB(bs);e.style.outline=b.ids.includes(id)?'3px solid #ffd166':''});
+  bind();document.getElementById('pq').oninput=e=>{xq=e.target.value;document.getElementById('pg').innerHTML=list();bind()};
+  document.getElementById('ok').onclick=()=>openX(xBind)}
+const _c=window.collection;window.collection=function(){_c();$.insertAdjacentHTML('afterbegin','<button class="cta" id="xfb" style="margin:0 0 10px;width:100%">⭐ Favoris & classeurs</button>');const b=document.getElementById('xfb');if(b){b.onclick=()=>openX(xFav);b.insertAdjacentHTML('afterend','<button class="cta" id="xdx" style="margin:0 0 10px;width:100%">📖 Pokédex</button>');document.getElementById('xdx').onclick=()=>openX(xDex)}};
+function chooseBinder(id){const bs=binders(),o=document.createElement('div');o.className='xbt';
+  o.innerHTML='<h2>Ajouter à un classeur</h2>'+(bs.length?bs.map((b,i)=>`<button class="cta" data-i="${i}">${b.ids.includes(id)?'✓ ':''}${esc(b.n)}</button>`).join(''):'<p class="hint">Aucun classeur.</p>')+'<button class="lnk" id="nw">+ Nouveau classeur</button><button class="lnk" id="cl">Fermer</button>';
+  document.body.appendChild(o);o.style.zIndex=70;
+  o.querySelectorAll('[data-i]').forEach(e=>e.onclick=()=>{const b=bs[+e.dataset.i];b.ids=b.ids.includes(id)?b.ids.filter(x=>x!==id):[...b.ids,id];saveB(bs);toast('Classeur mis à jour');o.remove()});
+  o.querySelector('#nw').onclick=()=>{const n=(prompt('Nom du classeur ?')||'').trim().slice(0,24);if(n){bs.push({n,ids:[id]});saveB(bs);toast('Ajoutée à '+n);o.remove()}};
+  o.querySelector('#cl').onclick=()=>o.remove()}
+const _z=window.zoom;window.zoom=function(c){_z(c);if(!c)return;const d=document.body.lastElementChild;if(!d)return;
+  if(col[c.id]){d.insertAdjacentHTML('beforeend','<div style="display:flex;gap:10px;justify-content:center;margin:8px"><button class="chip" id="xfv"></button><button class="chip" id="xbn">📁 Classeur</button></div>');
+    const fb=d.querySelector('#xfv'),lab=()=>fb.textContent=favs().includes(c.id)?'⭐ Favori':'☆ Ajouter aux favoris';lab();
+    fb.onclick=e=>{e.stopPropagation();const f=store.get(FV,[]);store.set(FV,f.includes(c.id)?f.filter(x=>x!==c.id):[c.id,...f]);lastSig='';lab()};
+    d.querySelector('#xbn').onclick=e=>{e.stopPropagation();chooseBinder(c.id)}}
+  trade(d,c);
+  if(!col[c.id]){const im=d.querySelector('.tilt img');if(im)im.classList.add('xgr');const b=d.querySelector('.bd');if(b)b.insertAdjacentHTML('afterend','<div class="hint">Pas encore obtenue</div>')}
+  const sid=String(c.id).replace(/-[^-]+$/,'');
+  rates(sid).then(r=>{if(!r||!d.isConnected)return;const n=r.cnt[c.id]||0,pc=n/r.N*100,t=n?'🎲 Drop : ≈ '+(pc<1?pc.toFixed(2):pc.toFixed(1)).replace('.',',')+' % par booster (1 sur '+Math.round(r.N/n)+')':'🎲 Drop : moins de 1 sur '+r.N+' (très rare)';
+    const h=document.createElement('div');h.className='hint';h.textContent=t;const x=d.querySelector('.px');(x||d.lastElementChild).insertAdjacentElement('afterend',h)}).catch(()=>{})};
 let busyR=0,lastP=0;
 function badge(l){const n=l.filter(f=>f.pend).length,nav=document.getElementById('nav'),bt=nav&&nav.querySelector('button[data-t=soc]');if(!bt)return;let b=bt.querySelector('.xbd');if(!n){if(b)b.remove();return}if(!b){b=document.createElement('span');b.className='xbd';bt.appendChild(b)}b.textContent=n;
   if(n>lastP){const f=l.find(x=>x.pend);toast('⚔️ '+(f?f.n:'Un ami')+' te défie !');if(navigator.vibrate)navigator.vibrate([80,60,80])}lastP=n}
