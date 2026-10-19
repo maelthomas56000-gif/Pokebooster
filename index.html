@@ -1736,10 +1736,14 @@ html[data-theme=dark] #wlt{color:#ffd86b}
 .soc input:focus{border-color:var(--g1);box-shadow:0 0 0 4px color-mix(in srgb,var(--g1) 22%,transparent)}
 .toast{border-radius:20px;background:color-mix(in srgb,var(--ink) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .tbox{border-radius:30px}
+
+/* v27 : netteté — plus de couche GPU figée en basse résolution, plus de rééchantillonnage des cartes */
+.tilt,.pers,.zc,.sc,.g{will-change:auto!important}
+.zc img,.zc.fa img,.sc img,.g img{transform:none!important;image-rendering:auto}
 </style>
 
 <script>
-/* v26 : fallback agrandissement + set 30th (me55) ; v25 : images HD — numéros sans zéros, ids de sets corrigés, upgrade renforcé à l'agrandissement */
+/* v27 : CSS netteté ; v26 : fallback agrandissement + set 30th (me55) ; v25 : images HD — numéros sans zéros, ids de sets corrigés, upgrade renforcé à l'agrandissement */
 (function(){
 const MIN=520,cache=new Map(),RX=/assets\.tcgdex\.net\/\w+\/([^/]+)\/([^/]+)\/([^/]+)\/high\.(?:webp|png)/;
 const SP={'30th':'me55','swsh3.5':'swsh35','swsh4.5':'swsh45','swsh10.5':'pgo','sm3.5':'sm35','sm7.5':'sm75','sm11.5':'sm115','sv10.5b':'zsv10pt5','sv10.5w':'rsv10pt5'};
