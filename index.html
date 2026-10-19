@@ -1449,10 +1449,11 @@ const _rs=window.results;window.results=function(){_rs();if(BATTLE||!MTOT)return
   if(MLAST!==pack){MLAST=pack;MSUM+=pack.reduce((t,c)=>t+(val(c)||0),0);MULT--}
   const done=MTOT-MULT;let h=`<div class="pc"><b>Série : ${done}/${MTOT} boosters</b><b style="font-size:20px">${fmt(MSUM)}</b><small>Valeur cumulée</small>${MULT>0?'<button class="cta" id="xnx">▶ Booster suivant</button>':'<small>Série terminée ✓</small>'}</div>`;
   $.insertAdjacentHTML('afterbegin',h);const n=document.getElementById('xnx');if(n)n.onclick=()=>go('focus');if(MULT<=0){MTOT=0;MULT=0}};
-function trade(d,c){if(BATTLE||TY)return;const m=col[c.id],v=c.price??val(c);if(v==null||!(v>=0))return;
+const pr=c=>c.price??(c.o?(c.o[0]??c.o[1]):val(c));
+function trade(d,c){if(BATTLE||TY)return;const m=col[c.id],v=pr(c);if(v==null||!(v>=0)){d.insertAdjacentHTML('beforeend','<small style="text-align:center">Prix indisponible : achat et vente impossibles pour cette carte.</small>');return}
   const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;justify-content:center;margin:6px;flex-wrap:wrap';
   const sell=Math.round(v*80)/100,buy=Math.round(v*125)/100;
-  row.innerHTML=`<small style="width:100%;text-align:center">💰 Portefeuille : ${fmt(wal())}</small>`+(m?`<button class="chip" id="xsl">Vendre 1 · +${fmt(sell)}</button>`:`<button class="chip" id="xby" ${wal()<buy?'disabled style="opacity:.45"':''}>Acheter · ${fmt(buy)}</button>`);
+  row.innerHTML=`<small style="width:100%;text-align:center">💰 Portefeuille : ${fmt(wal())}</small>`+(m?`<button class="chip" id="xsl">Vendre 1 · +${fmt(sell)}</button>`:`<button class="chip" id="xby" ${wal()<buy?'disabled style="opacity:.45"':''}>Acheter · ${fmt(buy)}</button>${wal()<buy?'<small style="width:100%;text-align:center">Pas assez d’argent : vends des doublons pour en gagner.</small>':''}`);
   d.appendChild(row);
   const done=()=>{store.set(KEY,col);lastSig='';d.remove();render()};
   const sl=row.querySelector('#xsl');if(sl)sl.onclick=e=>{e.stopPropagation();if(m.count<2&&!confirm('Vendre ton dernier exemplaire ?'))return;setWal(wal()+sell);m.count--;if(m.count<1)delete col[c.id];toast('Vendue +'+fmt(sell));done()};
@@ -1529,7 +1530,7 @@ function xPick(){const bs=binders(),b=bs[xi];if(!b)return openX(xFav);
   const bind=()=>document.querySelectorAll('[data-p]').forEach(e=>e.onclick=()=>{const id=e.dataset.p;b.ids=b.ids.includes(id)?b.ids.filter(x=>x!==id):[...b.ids,id];saveB(bs);e.style.outline=b.ids.includes(id)?'3px solid #ffd166':''});
   bind();document.getElementById('pq').oninput=e=>{xq=e.target.value;document.getElementById('pg').innerHTML=list();bind()};
   document.getElementById('ok').onclick=()=>openX(xBind)}
-const _c=window.collection;window.collection=function(){_c();$.insertAdjacentHTML('afterbegin','<button class="cta" id="xfb" style="margin:0 0 10px;width:100%">⭐ Favoris & classeurs</button>');const b=document.getElementById('xfb');if(b){b.onclick=()=>openX(xFav);b.insertAdjacentHTML('afterend','<button class="cta" id="xdx" style="margin:0 0 10px;width:100%">📖 Pokédex</button>');document.getElementById('xdx').onclick=()=>openX(xDex)}};
+const _c=window.collection;window.collection=function(){_c();$.insertAdjacentHTML('afterbegin','<button class="cta" id="xfb" style="margin:0 0 10px;width:100%">⭐ Favoris & classeurs</button>');const b=document.getElementById('xfb');if(b){b.insertAdjacentHTML('beforebegin','<div class="hint" style="text-align:center;margin-bottom:6px">💰 Portefeuille : '+fmt(wal())+'</div>');b.onclick=()=>openX(xFav);b.insertAdjacentHTML('afterend','<button class="cta" id="xdx" style="margin:0 0 10px;width:100%">📖 Pokédex</button>');document.getElementById('xdx').onclick=()=>openX(xDex)}};
 function chooseBinder(id){const bs=binders(),o=document.createElement('div');o.className='xbt';
   o.innerHTML='<h2>Ajouter à un classeur</h2>'+(bs.length?bs.map((b,i)=>`<button class="cta" data-i="${i}">${b.ids.includes(id)?'✓ ':''}${esc(b.n)}</button>`).join(''):'<p class="hint">Aucun classeur.</p>')+'<button class="lnk" id="nw">+ Nouveau classeur</button><button class="lnk" id="cl">Fermer</button>';
   document.body.appendChild(o);o.style.zIndex=70;
@@ -1542,6 +1543,7 @@ const _z=window.zoom;window.zoom=function(c){_z(c);if(!c)return;const d=document
     fb.onclick=e=>{e.stopPropagation();const f=store.get(FV,[]);store.set(FV,f.includes(c.id)?f.filter(x=>x!==c.id):[c.id,...f]);lastSig='';lab()};
     d.querySelector('#xbn').onclick=e=>{e.stopPropagation();chooseBinder(c.id)}}
   trade(d,c);
+  if(!col[c.id]){const px=d.querySelector('.px');if(px)px.textContent=fmt(pr(c))}
   if(!col[c.id]){const im=d.querySelector('.tilt img');if(im)im.classList.add('xgr');const b=d.querySelector('.bd');if(b)b.insertAdjacentHTML('afterend','<div class="hint">Pas encore obtenue</div>')}
   const sid=String(c.id).replace(/-[^-]+$/,'');
   rates(sid).then(r=>{if(!r||!d.isConnected)return;const n=r.cnt[c.id]||0,pc=n/r.N*100,t=n?'🎲 Drop : ≈ '+(pc<1?pc.toFixed(2):pc.toFixed(1)).replace('.',',')+' % par booster (1 sur '+Math.round(r.N/n)+')':'🎲 Drop : moins de 1 sur '+r.N+' (très rare)';
