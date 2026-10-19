@@ -703,8 +703,22 @@ function fx(c,n,flash){
 
 // ---------- Accueil : boosters ----------
 const BOOST={'30th':'boosters/30th.webp'};
-fetch('boosters/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(m=>{if(!m||typeof m!=='object')return;const n=Object.keys(BOOST).length;Object.assign(BOOST,m);if(Object.keys(BOOST).length!==n&&screen==='home'&&sets.length)home()}).catch(()=>{});
+let READY=0;const BOOSTP=fetch('boosters/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(m=>{if(!m||typeof m!=='object')return;const n=Object.keys(BOOST).length;Object.assign(BOOST,m);if(Object.keys(BOOST).length!==n&&READY&&screen==='home'&&sets.length)home()}).catch(()=>{});
 const boostImg=id=>BOOST[id]?`<img class="rpk" data-h alt="" decoding="async" src="${esc(BOOST[id])}" onload="this.parentNode.classList.add('rp')">`:'';
+// Préchargement au démarrage : logos, visuels de boosters et illustrations des premières extensions
+async function preloadHome(){
+  await BOOSTP;
+  const pl=document.getElementById('pl');let d=0,t=0;
+  const imgP=u=>new Promise(r=>{const i=new Image();i.onload=()=>{(i.decode?i.decode():Promise.resolve()).catch(()=>{}).then(r)};i.onerror=()=>r();i.src=u});
+  const jobs=[imgP('https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg')];
+  sets.slice(0,10).forEach(s=>{
+    if(s.logo)jobs.push(imgP(s.logo+'.png'));
+    if(BOOST[s.id])jobs.push(imgP(BOOST[s.id]));
+    else jobs.push(loadArt(document.createElement('div'),s.id).catch(()=>{}));
+  });
+  t=jobs.length;jobs.forEach(p=>p.then(()=>{d++;if(pl)pl.textContent=Math.round(100*d/t)+' %'}));
+  await Promise.all(jobs);
+}
 function packHTML(s,on=''){
   return `<div class="pk ${on}" data-id="${s.id}" style="--ph:${hue(s.id)}">
     <div class="strip"><i class="cr"></i><i class="foil"></i><i class="wr"></i></div>
@@ -1297,6 +1311,9 @@ function render(){
       $.innerHTML=`<div class="center" style="flex-direction:column;gap:14px;padding:24px;text-align:center"><p class="hint">Impossible de charger les extensions.<br><small>${esc(err)}</small></p><button class="cta" id="rt">Réessayer</button></div>`;
       document.getElementById('rt').onclick=()=>{$.innerHTML='<div class="center"><div class="spin"></div></div>';boot()};return}
     sets=list.filter(okSet).filter(x=>!HID.has(x.id)).reverse();setId=(sets.find(s=>s.logo)||sets[0]).id;
+    $.innerHTML='<div class="center" style="flex-direction:column;gap:12px"><div class="spin"></div><b>Préparation des boosters…</b><small class="hint" id="pl">0 %</small></div>';
+    await Promise.race([preloadHome().catch(()=>{}),new Promise(r=>setTimeout(r,7000))]);
+    READY=1;
     try{render()}catch(e){$.innerHTML='<p class="hint center">Erreur d\'affichage : '+esc(e.message)+'</p>'}
   };
   window.addEventListener('online',()=>{if(!sets.length)boot()});
