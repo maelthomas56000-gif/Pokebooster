@@ -1739,11 +1739,12 @@ html[data-theme=dark] #wlt{color:#ffd86b}
 </style>
 
 <script>
-/* v24 : images HD — remplace les scans trop petits, sinon les affine */
+/* v25 : images HD — numéros sans zéros, ids de sets corrigés, upgrade renforcé à l'agrandissement */
 (function(){
 const MIN=520,cache=new Map(),RX=/assets\.tcgdex\.net\/\w+\/([^/]+)\/([^/]+)\/([^/]+)\/high\.(?:webp|png)/;
-const ps=s=>s.replace(/^(sv|swsh|sm|xy|bw|dp|ex|me)0*(\d+)/,'$1$2').replace(/\.5$/,'pt5');
-const alt=u=>{const m=RX.exec(u);return m?`https://images.pokemontcg.io/${ps(m[2])}/${m[3]}_hires.png`:null};
+const SP={'swsh3.5':'swsh35','swsh4.5':'swsh45','swsh10.5':'pgo','sm3.5':'sm35','sm7.5':'sm75','sm11.5':'sm115','sv10.5b':'zsv10pt5','sv10.5w':'rsv10pt5'};
+const ps=s=>SP[s.replace(/^([a-z]+)0+(\d)/,'$1$2')]||s.replace(/^([a-z]+)0*(\d+)/,'$1$2').replace(/\.5$/,'pt5');
+const alts=u=>{const m=RX.exec(u);if(!m)return[];const n=m[3],set=ps(m[2]),nums=[...new Set([n.replace(/^(\D*)0+(?=\d)/,'$1'),n])];return nums.map(x=>`https://images.pokemontcg.io/${set}/${x}_hires.png`)};
 const load=(u,cors)=>new Promise((ok,ko)=>{const i=new Image();if(cors)i.crossOrigin='anonymous';i.onload=()=>ok(i);i.onerror=ko;i.src=u});
 function sharpen(d,w,h){const s=new Uint8ClampedArray(d.data),o=d.data,k=[0,-.4,0,-.4,2.6,-.4,0,-.4,0];
  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const p=(y*w+x)*4;for(let c=0;c<3;c++){o[p+c]=s[p+c]*k[4]+s[p-4+c]*k[3]+s[p+4+c]*k[5]+s[p-w*4+c]*k[1]+s[p+w*4+c]*k[7]}}}
@@ -1751,14 +1752,16 @@ async function enhance(im){const f=Math.max(2,Math.ceil(1100/im.naturalHeight)),
  const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(im,0,0,w,h);
  const d=x.getImageData(0,0,w,h);sharpen(d,w,h);x.putImageData(d,0,0);
  return new Promise((ok,ko)=>c.toBlob(b=>b?ok(URL.createObjectURL(b)):ko(),'image/webp',.93))}
-function best(u){if(cache.has(u))return cache.get(u);
+function best(u,min){const k=u+'|'+min;if(cache.has(k))return cache.get(k);
  const p=(async()=>{let cur;try{cur=await load(u)}catch(e){return u}
+  if(cur.naturalWidth>=min)return u;
+  for(const a of alts(u)){try{const i=await load(a);if(i.naturalWidth>cur.naturalWidth*1.1)return a}catch(e){}}
   if(cur.naturalWidth>=MIN)return u;
-  const a=alt(u);if(a){try{const i=await load(a);if(i.naturalWidth>cur.naturalWidth*1.4)return a}catch(e){}}
   try{return await enhance(await load(u,true))}catch(e){return u}})();
- cache.set(u,p);return p}
-function fix(el){if(el.tagName!=='IMG'||el.dataset.hd)return;const u=el.currentSrc||el.src;if(!RX.test(u))return;
- best(u).then(n=>{if(n!==u&&el.isConnected&&(el.currentSrc||el.src)===u){el.dataset.hd=1;el.src=n}})}
+ cache.set(k,p);return p}
+function fix(el){if(el.tagName!=='IMG')return;const u=el.currentSrc||el.src;if(!RX.test(u))return;
+ const min=el.closest&&el.closest('.zc')?760:MIN;
+ best(u,min).then(n=>{if(n!==u&&el.isConnected&&(el.currentSrc||el.src)===u){el.dataset.hd=1;el.src=n}})}
 new MutationObserver(ms=>{for(const m of ms){if(m.type==='attributes')fix(m.target);else m.addedNodes.forEach(n=>{if(n.nodeType===1){fix(n);n.querySelectorAll&&n.querySelectorAll('img').forEach(fix)}})}})
  .observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src']});
 })();
