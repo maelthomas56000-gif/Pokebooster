@@ -1376,8 +1376,10 @@ const card=(o,extra)=>{const v=okv(o),bu=o.me&&o.L?o.L:(o.b&&(o.b.u||(real(o.b.i
   ${o.o?((o.o.l>1||o.o.p>1||o.o.m)?`<div class="pf-t warn">⚠️ Options activées : chance ×${o.o.l} · God pack ${o.o.p} %${o.o.m?' · cartes manquantes':''}</div>`:'<div class="pf-t">✓ Taux de drop normaux</div>'):''}
   ${o.f&&o.f.length?`<div class="pf-f">${o.f.map(x=>{const u=x.u||(real(x.i)?x.i+'/low.webp':'');return u?`<img src="${esc(u)}" alt="" onerror="this.remove()">`:''}).join('')}</div><small class="pf-fl">⭐ Cartes favorites</small>`:''}${extra||''}</div>`};
 let ok=null,lastPaint='';
-const sigP=()=>JSON.stringify([store.get(FR,[]).map(f=>({...f,d:0})),{...mine(),d:0},bh(),ok,name(),av0().length,av0().slice(-30)]);
+const sigP=()=>JSON.stringify([store.get(FR,[]).map(f=>({...f,d:Math.floor((f.d||0)/6e4)})),{...mine(),d:0},bh(),ok,name(),av0().length,av0().slice(-30)]);
 const bh=()=>store.get(BH,[]);
+const ago=d=>{const s=Math.max(0,(Date.now()-d)/1000);if(s<90)return'en ligne';const m=Math.round(s/60);if(m<60)return'vu il y a '+m+' min';const h=Math.round(m/60);if(h<24)return'vu il y a '+h+' h';const j=Math.round(h/24);return j<2?'vu hier':j<30?'vu il y a '+j+' j':'vu il y a longtemps'};
+const pres=(o,mini)=>{if(o.me)return'<span class="pres on"><i></i>en ligne</span>';if(!o.d)return'';const t=ago(o.d),c=t==='en ligne'?'on':(Date.now()-o.d<36e5?'rec':'');return`<span class="pres ${c}"><i></i>${t}</span>`};
 const rec=code=>bh().filter(h=>h.f===code).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
 function resolve(l){
   const me=myId(),mb=store.get(BT,[]),h=bh();
@@ -1418,18 +1420,18 @@ function paint(){
   <input id="sn" maxlength="20" placeholder="Ton pseudo" value="${esc(name())}">
   ${card({...mine(true),me:1})}
   <button class="lnk" id="sav">🖼️ Changer ma photo de profil</button>
-  <p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne':''}</p>
+  <div style="text-align:center">${pres({me:1})}</div><p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne':''}</p>
   <button class="cta" id="sc">Copier mon code</button>
   <button class="lnk" id="ss">Partager mon code</button>
   <h2>Ajouter un ami</h2>
   <input id="si" placeholder="Code de ton ami" autocapitalize="characters">
   <button class="cta" id="sa">Ajouter</button>
-  ${fr.length?`<h2>Classement (valeur)</h2>${lb.map((o,i)=>`<div class="xlb${o.me?' me':''}"><span class="lbn"><em>${['🥇','🥈','🥉'][i]||i+1+'.'}</em>${avH(o,34)}${esc(o.n)}</span><b>${okv(o)?fmt(o.v):'—'}</b></div>`).join('')}`:''}
+  ${fr.length?`<h2>Classement (valeur)</h2>${lb.map((o,i)=>`<div class="xlb${o.me?' me':''}"><span class="lbn"><em>${['🥇','🥈','🥉'][i]||i+1+'.'}</em>${avH(o,34)}${esc(o.n)}${o.me||!o.code?'':pres(o)}</span><b>${okv(o)?fmt(o.v):'—'}</b></div>`).join('')}`:''}
   <h2>Combats de boosters</h2>
   <p class="hint">Chacun ouvre un booster : le total de valeur le plus élevé gagne. Extension utilisée pour défier : <b>${esc(S0?S0.name:'—')}</b> (change-la dans Boosters).</p>
   ${h.length?h.slice(0,6).map(x=>`<div class="xlb" style="gap:8px;align-items:center"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'}</span>${hc(x.m,'Toi')}${hc(x.o,esc(x.fn))}</div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
   <h2>Mes amis (${fr.length})</h2><div class="xfl">
-  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`<small>${f.code?'Mis à jour':'Instantané'} le ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>${f.code&&!(f.ver>=3||f.v===3)?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':f.code&&!(f.ver>=3)?'<small>ℹ️ Ses stats exactes apparaîtront dès qu’il aura ouvert la nouvelle version</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
+  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`${f.code?pres(f):`<small>Instantané du ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>`}${f.code&&!(f.ver>=3||f.v===3)?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':f.code&&!(f.ver>=3)?'<small>ℹ️ Ses stats exactes apparaîtront dès qu’il aura ouvert la nouvelle version</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
   document.getElementById('sav').onclick=pickAv;
   const cam=document.getElementById('cam');if(cam){cam.onclick=pickAv;const a0=document.querySelector('.pf .av');if(a0){a0.style.cursor='pointer';a0.onclick=pickAv}}
   const $n=document.getElementById('sn');
@@ -1602,7 +1604,7 @@ async function refresh(repaint,force){
   if(repaint&&screen==='social'&&!document.querySelector('.xbt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT')&&sigP()!==lastPaint){const y=window.scrollY;paint();window.scrollTo(0,y)}
 }
 window.socialScreen=function(){paint();refresh(true,true)};
-setInterval(()=>{if(!document.hidden&&store.get(FR,[]).length)refresh(true)},30000);
+setInterval(()=>{if(!document.hidden&&name())refresh(true,true)},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh(true)});
 setTimeout(()=>refresh(false),2500);
 
@@ -1668,5 +1670,72 @@ body.ovx #wlt{display:none!important}
 .xbt .cta{width:100%;max-width:420px}.xbt h3{margin:6px 0 0;color:var(--mut);font-size:13px}
 .pf-edit{border:0;padding:9px 18px;border-radius:999px;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font-weight:800;font-size:14px;box-shadow:0 6px 18px color-mix(in srgb,var(--g1) 45%,transparent)}
 </style>
+<style>
+/* v23 : « Aurore vivante » — profondeur, verre, présence des amis */
+html[data-theme] body::before{background:radial-gradient(ellipse 80% 50% at 50% -8%,hsl(var(--h) 90% 82%/.85),transparent 60%),radial-gradient(circle at 100% 24%,rgba(174,240,224,.8),transparent 46%),radial-gradient(circle at 0 84%,rgba(255,217,199,.8),transparent 50%),radial-gradient(circle at 80% 100%,rgba(190,200,255,.8),transparent 50%);background-size:140% 140%;animation:aur 22s ease-in-out infinite alternate}
+html[data-theme=dark] body::before{background:radial-gradient(ellipse 80% 50% at 50% -8%,hsl(var(--h) 75% 38%/.6),transparent 60%),radial-gradient(circle at 100% 25%,rgba(45,226,196,.18),transparent 46%),radial-gradient(circle at 0 88%,rgba(255,122,217,.18),transparent 52%),radial-gradient(circle at 80% 100%,rgba(53,120,255,.2),transparent 50%);background-size:140% 140%}
+@keyframes aur{to{background-position:12% 8%}}
+::selection{background:color-mix(in srgb,var(--g1) 30%,transparent)}
+html[data-theme] body h1{font-size:32px;background:linear-gradient(120deg,var(--ink) 30%,var(--g1) 70%,var(--g2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+html[data-theme] body h2{display:flex;align-items:center;gap:10px}
+html[data-theme] body h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--bd),transparent)}
+/* navigation */
+html[data-theme] body #nav{height:72px;padding:7px;gap:4px;border-radius:32px;box-shadow:0 18px 40px var(--sh),0 2px 0 rgba(255,255,255,.6) inset}
+html[data-theme] body #nav button{border-radius:25px;transition:transform .2s,background .25s,color .2s}
+html[data-theme] body #nav button svg{transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+html[data-theme] body #nav button.on{box-shadow:0 8px 20px rgba(106,92,255,.5),inset 0 1px 0 rgba(255,255,255,.4)}
+html[data-theme] body #nav button.on svg{transform:translateY(-1px) scale(1.15)}
+/* cartes de verre avec liseré lumineux */
+html[data-theme] body .row,html[data-theme] body .stc{position:relative;border-radius:24px;border:1px solid var(--line)}
+html[data-theme] body .row::before,html[data-theme] body .stc::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(140deg,rgba(255,255,255,.9),transparent 40%,color-mix(in srgb,var(--g2) 40%,transparent));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.7}
+html[data-theme=dark] body .row::before,html[data-theme=dark] body .stc::before{opacity:.35}
+html[data-theme] body .row{border-left:5px solid hsl(var(--rh,250) 75% 62%)}
+html[data-theme] body .stc b{font-size:28px;background:linear-gradient(135deg,var(--ink),var(--g1));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+html[data-theme] body .stc{overflow:hidden}
+html[data-theme] body .stc::after{content:"";position:absolute;right:-18px;top:-18px;width:70px;height:70px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--g2) 35%,transparent),transparent 70%)}
+html[data-theme] body .bar{height:9px}
+html[data-theme] body .bar i{box-shadow:0 0 12px color-mix(in srgb,var(--g1) 55%,transparent);position:relative;overflow:hidden}
+html[data-theme] body .bar i::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.6) 50%,transparent 70%);animation:sheen 3.4s infinite}
+/* boosters : socle lumineux et profondeur */
+.car::after{content:"";flex:none;width:1px}
+.pk.on{filter:drop-shadow(0 0 22px hsl(var(--ph) 90% 65%/.35))}
+.pk.on .body{box-shadow:0 30px 60px hsl(var(--ph) 70% 40%/.5),inset 0 0 0 1px #fff7,inset 0 -30px 40px -20px #0004}
+.pk.on::after{height:30px;bottom:-26px;background:radial-gradient(ellipse,hsl(var(--ph) 85% 55%/.55),transparent 72%)}
+html[data-theme] body .cta{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--g1),var(--g2) 60%,#5de0c4);background-size:160% 100%;animation:ctag 6s ease-in-out infinite alternate}
+@keyframes ctag{to{background-position:100% 0}}
+html[data-theme] body .chip{transition:transform .15s,background .2s,box-shadow .2s}
+html[data-theme] body .chip.on{box-shadow:0 8px 20px rgba(106,92,255,.45),inset 0 1px 0 rgba(255,255,255,.4)}
+/* grille de cartes */
+html[data-theme] body .g{transition:transform .25s cubic-bezier(.3,1.4,.5,1),box-shadow .25s}
+html[data-theme] body .g:not(.miss):hover{transform:translateY(-4px) scale(1.03)}
+html[data-theme] body .g.last{animation:in .45s both,pulse2 2.6s 1s infinite}
+@keyframes pulse2{50%{box-shadow:0 0 0 3px var(--pan2),0 0 0 5px var(--g1),0 14px 34px rgba(106,92,255,.6)}}
+/* portefeuille */
+#wlt{border:1px solid var(--line);background:var(--pan);color:var(--ink);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);box-shadow:0 8px 22px var(--sh),inset 0 1px 0 rgba(255,255,255,.6);font-weight:900;letter-spacing:-.2px;padding:8px 14px}
+html[data-theme=dark] #wlt{color:#ffd86b}
+/* Amis : profil, présence, podium */
+.pf{border-radius:32px;box-shadow:0 20px 44px var(--sh)}
+.pf-b{height:124px;background:radial-gradient(circle at 85% 0,#ffffff80,transparent 55%),radial-gradient(circle at 10% 100%,hsl(calc(var(--ph) + 120) 90% 75%/.6),transparent 60%),linear-gradient(135deg,hsl(var(--ph) 80% 62%),hsl(calc(var(--ph) + 55) 85% 66%))}
+.pf-b::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.45) 50%,transparent 60%);animation:sheen 6s infinite}
+.pf .av{margin-top:64px}
+.pres{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;font-size:13px;font-weight:700;color:var(--mut);background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.pres i{width:9px;height:9px;border-radius:50%;background:#aaa6c4;flex:none}
+.pres.on{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pres.on i{background:var(--ok);animation:pul 1.8s infinite}
+.pres.rec i{background:#f2b630}
+@keyframes pul{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+.lbn .pres{padding:2px 8px;font-size:11px;margin-left:2px}
+.lbn .pres i{width:7px;height:7px}
+.soc .xlb{border-radius:18px;padding:11px 16px}
+.soc .xlb:nth-of-type(1){background:linear-gradient(90deg,color-mix(in srgb,#ffd24d 22%,var(--pan2)),var(--pan2) 70%)}
+.soc .xlb b{font-variant-numeric:tabular-nums;font-weight:900}
+.soc .pg .st:nth-child(odd){background:color-mix(in srgb,var(--g1) 9%,transparent)}
+.soc .pg .st:nth-child(even){background:color-mix(in srgb,var(--g2) 10%,transparent)}
+.st{border-radius:20px;transition:transform .15s}.st:active{transform:scale(.96)}
+.soc input:focus{border-color:var(--g1);box-shadow:0 0 0 4px color-mix(in srgb,var(--g1) 22%,transparent)}
+.toast{border-radius:20px;background:color-mix(in srgb,var(--ink) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.tbox{border-radius:30px}
+</style>
+
 </body>
 </html>
