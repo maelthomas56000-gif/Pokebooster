@@ -470,6 +470,9 @@ html[data-theme] body .chip.dg{color:#c0392b}
 .tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
 .row .t small{display:block}
 .tgrid .g{animation:none;overflow:hidden}.tgrid .g .pr{position:absolute;left:0;right:0;bottom:0;top:auto;width:auto;transform:none;margin:0;text-align:center;font-size:10px;font-weight:800;background:#000c;color:#fff;border-radius:0 0 5px 5px;padding:2px 0}
+
+#wlt{position:fixed;top:max(8px,env(safe-area-inset-top));right:12px;z-index:40;display:flex;align-items:center;gap:4px;border:1px solid #ffffff33;border-radius:20px;padding:7px 12px;background:rgba(23,20,58,.9);color:#ffe08a;font-weight:800;font-size:14px;box-shadow:0 4px 16px #0006}
+body.wl #app::before{content:"";display:block;height:34px;flex:none}
 </style>
 </head>
 <body>
@@ -644,7 +647,7 @@ async function loadSet(id){
 const isVint=s=>/^(base|gym|neo)/.test(s.id||'');
 const missP=()=>cfg.miss===true?100:Math.max(0,+cfg.miss||0);
 function drawNorm(cards,n=10,pika=false,vint=false){
-  const PKU=c=>/pikachu/i.test(c.name),rgb=cards.filter(c=>c.ni&&!c.rp),rpl=cards.filter(c=>c.rp&&!(pika&&PKU(c))),pks=pika?cards.filter(c=>!c.ni&&!c.rp&&PKU(c)):[]; cards=cards.filter(c=>!c.ni&&!c.rp&&!(pika&&PKU(c)));
+  const ALL=cards,PKU=c=>/pikachu/i.test(c.name),rgb=cards.filter(c=>c.ni&&!c.rp),rpl=cards.filter(c=>c.rp&&!(pika&&PKU(c))),pks=pika?cards.filter(c=>!c.ni&&!c.rp&&PKU(c)):[]; cards=cards.filter(c=>!c.ni&&!c.rp&&!(pika&&PKU(c)));
   const P={}; Object.keys(T).forEach(t=>P[t]=cards.filter(c=>c.tier===t));
   const used=new Set();
   const one=(...ls)=>{for(const l of ls){let a=l.filter(c=>!used.has(c.id));if(cfg.miss&&Math.random()*100<missP()){const m=a.filter(c=>!col[c.id]);if(m.length)a=m}if(a.length){const c=rnd(a);used.add(c.id);return c}}return null};
@@ -661,6 +664,12 @@ function drawNorm(cards,n=10,pika=false,vint=false){
   const rare=hit(); if(rare) out.push(rare);
   if(pika){const p=one(pks.filter(c=>!/\bex\b/i.test(c.name)),pks);if(p) out.push({...p,pk:true})}
   if(rpl.length&&cfg.rp&&Math.random()<.18){const i=out.findIndex(c=>c.tier==='C'&&!c.pk);const x=one(rpl);if(i>-1&&x)out[i]=x}
+  if(cfg.miss){const mp=missP(),elig=c=>!col[c.id]&&(!c.rp||cfg.rp)&&!out.some(o=>o&&o.id===c.id);
+    for(let i=0;i<out.length;i++){const o=out[i];if(!o||!col[o.id]||Math.random()*100>=mp)continue;
+      let pool=ALL.filter(elig);if(!pool.length)break;
+      if(o.pk){pool=pool.filter(c=>PKU(c));if(!pool.length)continue}
+      else{const same=pool.filter(c=>c.tier===o.tier&&!!c.rp===!!o.rp&&!!c.ni===!!o.ni);if(same.length)pool=same}
+      const x=rnd(pool);out[i]=o.pk?{...x,pk:true}:o.rev?{...x,rev:true}:x}}
   const K=c=>c.pk?99:c.rp?3.2:c.rev?3.5:({E:0,C:1,U:2,R:4,RH:5,UR:6,SR:7})[c.tier]??1;
   return out.filter(Boolean).map((c,i)=>[c,i]).sort((x,y)=>K(x[0])-K(y[0])||x[1]-y[1]).map(x=>x[0]);
 }
@@ -1439,9 +1448,16 @@ async function rates(sid){if(RATE[sid])return RATE[sid];const cards=await(pre[si
   if(!S0||!cards.length||cards[0].gen)return null;const cnt={},N=3000;
   fairDraw(()=>{for(let i=0;i<N;i++){new Set(drawNorm(cards,packSize(S0),is30(S0),isVint(S0)).map(c=>c.id)).forEach(k=>cnt[k]=(cnt[k]||0)+1)}});
   return RATE[sid]={cnt,N}}
-window.zoomAny=id=>{const c=cardsOf(B[viewId],viewId).find(x=>x.id===id);if(c)zoom(c)};
+async function enrichCard(c,sid){
+  const k='d4'+cfg.lang+'_'+sid;let d=store.get(k,null);if(!d||Date.now()-d.t>12096e5)d={t:Date.now(),d:{}};
+  let e=d.d[c.id];
+  if(!e&&!c.ni){try{const x=await j(`${API}/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{};e=[x.rarity||'',x.category||'',m.trend??m.avg??null,m['trend-holo']??m['avg-holo']??null];d.d[c.id]=e;store.set(k,d)}catch(_){}}
+  const [r,kc,p,ph]=e||['','',null,null];
+  return {...c,setId:sid,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,kc),p,ph}}
+window.zoomAny=async id=>{const sid=viewId,c=cardsOf(B[sid],sid).find(x=>x.id===id);if(!c)return;
+  let e;try{e=await enrichCard(c,sid)}catch(_){e={...c,setId:sid,tier:c.ni?'SR':'C'}}zoom(e)};
 let MULT=0,MSUM=0,MTOT=0,MLAST=null;
-const WK='wal_v1',wal=()=>store.get(WK,0),setWal=v=>store.set(WK,Math.round(v*100)/100);
+const WK='wal_v1',wal=()=>store.get(WK,0),setWal=v=>{store.set(WK,Math.round(v*100)/100);updWal()};
 const _fs=window.focusScreen;window.focusScreen=function(){_fs();if(BATTLE||(TY&&!MULT))return;const w=$.querySelector('.swh');if(!w)return;
   w.insertAdjacentHTML('beforebegin',MULT>0?`<div class="hint">${TY&&tyc.etb>0?'📦 ETB':'Série en cours'} : ${MTOT-MULT+1}/${MTOT}</div>`:'<div class="chips" id="xm" style="justify-content:center">'+[1,5,10].map(n=>`<button class="chip ${n===1?'on':''}" data-m="${n}">×${n}</button>`).join('')+'</div>');
   document.querySelectorAll('#xm [data-m]').forEach(b=>b.onclick=()=>{const n=+b.dataset.m;MULT=n>1?n:0;MTOT=MULT;MSUM=0;MLAST=null;document.querySelectorAll('#xm .chip').forEach(x=>x.classList.toggle('on',x===b))})};
@@ -1449,15 +1465,18 @@ const _rs=window.results;window.results=function(){_rs();if(BATTLE||!MTOT)return
   if(MLAST!==pack){MLAST=pack;MSUM+=pack.reduce((t,c)=>t+(val(c)||0),0);MULT--}
   const done=MTOT-MULT;let h=`<div class="pc"><b>Série : ${done}/${MTOT} boosters</b><b style="font-size:20px">${fmt(MSUM)}</b><small>Valeur cumulée</small>${MULT>0?'<button class="cta" id="xnx">▶ Booster suivant</button>':'<small>Série terminée ✓</small>'}</div>`;
   $.insertAdjacentHTML('afterbegin',h);const n=document.getElementById('xnx');if(n)n.onclick=()=>go('focus');if(MULT<=0){MTOT=0;MULT=0}};
-const pr=c=>c.price??(c.o?(c.o[0]??c.o[1]):val(c));
-function trade(d,c){if(BATTLE||TY)return;const m=col[c.id],v=pr(c);if(v==null||!(v>=0)){d.insertAdjacentHTML('beforeend','<small style="text-align:center">Prix indisponible : achat et vente impossibles pour cette carte.</small>');return}
+const estP=c=>c.rp?2:({E:.1,C:.1,U:.15,R:.5,RH:1.5,UR:4,SR:8})[c.tier]??.2;
+const pr=c=>{const v=c.price??(c.o?(c.o[0]??c.o[1]):val(c));return v==null?estP(c):v};
+function trade(d,c){if(BATTLE||TY)return;
+  const v=pr(c),est=c.price==null&&val(c)==null,sell=Math.round(v*80)/100,buy=Math.round(v*125)/100;
   const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;justify-content:center;margin:6px;flex-wrap:wrap';
-  const sell=Math.round(v*80)/100,buy=Math.round(v*125)/100;
-  row.innerHTML=`<small style="width:100%;text-align:center">💰 Portefeuille : ${fmt(wal())}</small>`+(m?`<button class="chip" id="xsl">Vendre 1 · +${fmt(sell)}</button>`:`<button class="chip" id="xby" ${wal()<buy?'disabled style="opacity:.45"':''}>Acheter · ${fmt(buy)}</button>${wal()<buy?'<small style="width:100%;text-align:center">Pas assez d’argent : vends des doublons pour en gagner.</small>':''}`);
-  d.appendChild(row);
-  const done=()=>{store.set(KEY,col);lastSig='';d.remove();render()};
-  const sl=row.querySelector('#xsl');if(sl)sl.onclick=e=>{e.stopPropagation();if(m.count<2&&!confirm('Vendre ton dernier exemplaire ?'))return;setWal(wal()+sell);m.count--;if(m.count<1)delete col[c.id];toast('Vendue +'+fmt(sell));done()};
-  const by=row.querySelector('#xby');if(by)by.onclick=e=>{e.stopPropagation();if(wal()<buy)return;setWal(wal()-buy);col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:v,count:1};toast('Carte achetée !');done()}}
+  const save=()=>{store.set(KEY,col);lastSig='';const y=window.scrollY;render();window.scrollTo(0,y);draw()};
+  function draw(){const m=col[c.id],w=wal(),dup=m&&m.count>1?m.count-1:0;
+    row.innerHTML=`<small style="width:100%;text-align:center">💰 Portefeuille : <b>${fmt(w)}</b>${est?' · prix estimé':''}</small>`+(m?`<button class="chip" id="xsl">Vendre 1 · +${fmt(sell)}</button>${dup>1?`<button class="chip" id="xsd">Vendre les ${dup} doublons · +${fmt(sell*dup)}</button>`:''}`:`<button class="chip" id="xby" ${w<buy?'disabled style="opacity:.45"':''}>Acheter · ${fmt(buy)}</button>${w<buy?`<small style="width:100%;text-align:center">Il te manque ${fmt(buy-w)} : vends des doublons pour en gagner.</small>`:''}`);
+    const sl=row.querySelector('#xsl');if(sl)sl.onclick=e=>{e.stopPropagation();const m=col[c.id];if(!m)return;if(m.count<2&&!confirm('Vendre ton dernier exemplaire ?'))return;setWal(wal()+sell);m.count--;if(m.count<1)delete col[c.id];toast('Vendue +'+fmt(sell));save()};
+    const sd=row.querySelector('#xsd');if(sd)sd.onclick=e=>{e.stopPropagation();const m=col[c.id];if(!m||m.count<2)return;const n=m.count-1;setWal(wal()+sell*n);m.count=1;toast('Doublons vendus +'+fmt(sell*n));save()};
+    const by=row.querySelector('#xby');if(by)by.onclick=e=>{e.stopPropagation();if(col[c.id]||wal()<buy)return;setWal(wal()-buy);col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:v,count:1};toast('Carte achetée ! −'+fmt(buy));save()}}
+  draw();d.appendChild(row)}
 function pickAv(){const o=document.createElement('div');o.className='xbt';let q='';
   const ids=()=>Object.keys(col).filter(id=>col[id].image&&(!q||nrm(col[id].name).includes(nrm(q)))).slice(0,90);
   const draw2=()=>{o.querySelector('#ag').innerHTML=ids().map(id=>`<div class="g" style="--i:0;--tc:${tc(col[id])}" data-a="${id}"><img src="${img(col[id])}" alt=""></div>`).join('')||'<p class="empty">Aucune carte.</p>';
@@ -1564,6 +1583,31 @@ window.socialScreen=function(){paint();refresh(true,true)};
 setInterval(()=>{if(!document.hidden&&store.get(FR,[]).length)refresh(true)},20000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh(true)});
 setTimeout(()=>refresh(false),2500);
+
+function updWal(){
+  const hide=screen==='reveal'||screen==='tycoon'||BATTLE||TY;
+  let p=document.getElementById('wlt');
+  document.body.classList.toggle('wl',!hide);
+  if(hide){if(p)p.style.display='none';return}
+  if(!p){p=document.createElement('button');p.id='wlt';p.setAttribute('aria-label','Mon argent');document.body.appendChild(p);
+    p.onclick=()=>{toast('Vends tes doublons pour gagner de l’argent, puis achète les cartes manquantes depuis une extension (filtre « Manquantes »).');if(screen!=='collection'&&screen!=='set')go('collection')}}
+  p.style.display='flex';p.textContent='💰 '+fmt(wal())}
+const _rdW=window.render;window.render=function(){const r=_rdW.apply(this,arguments);updWal();return r};
+const sellPrice=c=>Math.round(pr(c)*80)/100;
+function sellDups(list,after){
+  const L=list.filter(c=>c.count>1);if(!L.length)return toast('Aucun doublon à vendre.');
+  const n=L.reduce((t,c)=>t+c.count-1,0),g=L.reduce((t,c)=>t+(c.count-1)*sellPrice(c),0);
+  if(!confirm(`Vendre ${n} doublon${n>1?'s':''} pour ${fmt(g)} ?\nTu gardes 1 exemplaire de chaque carte.`))return;
+  L.forEach(c=>{c.count=1});setWal(wal()+g);store.set(KEY,col);lastSig='';toast('Doublons vendus +'+fmt(g));after()}
+const _c2=window.collection;window.collection=function(){_c2();
+  const n=Object.values(col).reduce((t,c)=>t+Math.max(0,c.count-1),0),a=document.getElementById('xdx')||document.getElementById('xfb');if(!a)return;
+  a.insertAdjacentHTML('afterend',`<button class="cta" id="xsa" style="margin:0 0 10px;width:100%">💰 Vendre tous les doublons${n?` (${n})`:''}</button>`);
+  document.getElementById('xsa').onclick=()=>sellDups(Object.values(col),collection)};
+const _ss=window.setScreen;window.setScreen=function(){_ss();
+  const g=$.querySelector('.grow'),L=Object.values(col).filter(c=>c.setId===viewId),n=L.reduce((t,c)=>t+Math.max(0,c.count-1),0);if(!g||!n)return;
+  g.insertAdjacentHTML('beforebegin','<button class="lnk" id="xsd2" style="width:100%">💰 Vendre les doublons de cette extension ('+n+')</button>');
+  document.getElementById('xsd2').onclick=()=>sellDups(L,setScreen)};
+setTimeout(updWal,0);
 const _t=window.tearOpen;if(_t)window.tearOpen=function(){if(navigator.vibrate)navigator.vibrate(35);return _t.apply(this,arguments)};
 })();
 </script>
