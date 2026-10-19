@@ -501,7 +501,7 @@ const rgbImg=l=>RGBIMG[String(l).toUpperCase()]||rgbArt(l);
 const genArt=c=>{const h=hue(c.setId||c.id||'x'),cl=t=>String(t||'').replace(/[<>&"']/g,''),n=cl(c.name),l=cl(c.lid),
   w=n.split(' ').reduce((a,x)=>{const t=a[a.length-1];if(t&&(t+' '+x).length<=14)a[a.length-1]=t+' '+x;else a.push(x);return a},[]).slice(0,3);
   return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 245 342"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${h} 70% 62%)"/><stop offset="1" stop-color="hsl(${(h+40)%360} 65% 30%)"/></linearGradient></defs><rect width="245" height="342" rx="12" fill="#f4e7a1"/><rect x="9" y="9" width="227" height="324" rx="7" fill="url(#g)"/><rect x="22" y="36" width="201" height="150" rx="5" fill="#fff" fill-opacity=".16"/><circle cx="122" cy="111" r="40" fill="#f4f4f4" stroke="#222" stroke-width="5"/><path d="M82 111a40 40 0 0 1 80 0z" fill="#e63946" stroke="#222" stroke-width="5"/><circle cx="122" cy="111" r="10" fill="#fff" stroke="#222" stroke-width="5"/>${w.map((t,i)=>`<text x="122" y="${226+i*25}" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="20" fill="#fff">${t}</text>`).join('')}<text x="122" y="318" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#fff" fill-opacity=".85">${l}</text></svg>`)};
-const img=(c,q='high')=>c.gen?genArt(c):c.rp&&c.ri>=0&&RPU[c.ri]?RPU[c.ri]:c.ni?(c.rp?(c.ri>=0?RPD[c.ri]:rpArt(c.name)):rgbImg(c.lid||String(c.id).split('-').pop())):`${c.image}/${q}.webp`;
+const img=(c,q='high')=>c.gen?genArt(c):c.rp&&c.ri>=0&&RPU[c.ri]?RPU[c.ri]:c.ni?(c.rp?(c.ri>=0?RPD[c.ri]:rpArt(c.name)):rgbImg(c.lid||String(c.id).split('-').pop())):HDget(`${c.image}/${q}.webp`);
 const val=c=>c.rev?(c.ph??c.p):(c.p??c.ph);
 const tc=c=>c.rev&&RANK[c.tier]<3?'#6ee7ff':(T[c.tier]||T.C)[1];
 const label=c=>c.rev?'Reverse holo':((c.rarity&&!/^none$/i.test(c.rarity)&&c.rarity)||(T[c.tier]||T.C)[0]);
@@ -570,6 +570,34 @@ document.addEventListener('error',e=>{
   if(!t.dataset.f){t.dataset.f='1';t.src=t.src.includes('.webp')?t.src.replace('.webp','.png'):t.src.replace('.png','.webp');return}
   const n=(t.alt||'?').replace(/[<>&]/g,'');
   t.src='data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 245 342"><rect width="245" height="342" rx="12" fill="#241F4A" stroke="#F2C14E" stroke-width="4"/><text x="122" y="175" fill="#fff" font-family="sans-serif" font-size="22" text-anchor="middle">${n}</text></svg>`);
+},true);
+
+/* ---- HD upgrade: TCGdex (600px) -> pokemontcg.io hires (~734px+) quand une carte est affichée en grand ---- */
+const HDC=new Map(),HDP=new Set();
+function HDget(u){return HDC.get(u)||u}
+const HDre=/^https:\/\/assets\.tcgdex\.net\/\w+\/[^/]+\/([^/]+)\/([^/]+)\/(?:high|low)\.(?:webp|png)$/;
+function HDcands(u){
+  const m=HDre.exec(u);if(!m)return[];
+  let set=m[1].toLowerCase().replace(/^([a-z]+)0+(\d)/,'$1$2').replace(/\./g,'pt');
+  let n=m[2];if(/^\d+$/.test(n))n=String(parseInt(n,10));
+  const b='https://images.pokemontcg.io/'+set+'/'+n;
+  return[b+'_hires.png',b+'.png'];
+}
+document.addEventListener('load',e=>{
+  const t=e.target;if(!t||t.tagName!=='IMG')return;
+  const u=t.dataset.o||t.src;
+  if(t.dataset.hd||!HDre.test(u))return;
+  if(t.clientWidth<150)return; // seulement les cartes affichées en grand
+  t.dataset.hd='1';t.dataset.o=u;
+  if(HDC.has(u)){if(HDC.get(u)!==t.src)t.src=HDC.get(u);return}
+  if(HDP.has(u))return;HDP.add(u);
+  const w0=t.naturalWidth||600,c=HDcands(u);let i=0;
+  const next=()=>{
+    if(i>=c.length)return;
+    const m=new Image();m.decoding='async';
+    m.onload=()=>{if(m.naturalWidth>w0){HDC.set(u,c[i-1]);document.querySelectorAll('img').forEach(x=>{if((x.dataset.o||x.src)===u&&x.src!==c[i-1])x.src=c[i-1]})}else next()};
+    m.onerror=next;m.src=c[i++];
+  };next();
 },true);
 
 const TL=new Map();let tlRun=false;
