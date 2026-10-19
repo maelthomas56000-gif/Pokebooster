@@ -619,8 +619,9 @@ const nrm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLow
 const cardsOf=(b,id)=>{const used=new Set();return b.c.map(([l,n,f,im])=>{let ri=-1;if(f===2){const k=nrm(n);ri=RPK.findIndex((r,i)=>!used.has(i)&&new RegExp(r).test(k));if(ri>-1)used.add(ri)}
   return{id:`${id}-${l}`,lid:f===2?l.replace(/^c-/,'CC'):l,name:n,image:im||`${b.b}/${l}`,ni:f===1||(f===2&&!im)?1:0,rp:f===2?1:0,ri,gen:(b.g&&!f)?1:0}})};
 
-function tier(r,cat){
+function tier(r,cat,pr){
   const s=(r||'').toLowerCase();
+  if((!s||/^none$|aucune/.test(s))&&!/nerg/i.test(cat||'')&&pr>=2)return pr>=30?'SR':pr>=8?'UR':pr>=4?'RH':'R';
   if(/nerg/i.test(cat||'')&&(!s||/commun|^common$/.test(s))&&!/peu|uncommon/.test(s)) return 'E';
   if(/peu commune|uncommon/.test(s)) return 'U';
   if(!s||/commun|^common$|none|aucune/.test(s)) return 'C';
@@ -640,7 +641,7 @@ async function loadSet(id){
     const p=document.getElementById('prog');if(p)p.textContent=`${++done}/${total}`}};
   await Promise.all(Array.from({length:16},worker));
   if(total) store.set('d4'+cfg.lang+'_'+id,d);
-  return cards.map(c=>{const [r,k,p,ph]=d.d[c.id]||['','',null,null];return {...c,setId:id,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,k),p,ph}});
+  return cards.map(c=>{const [r,k,p,ph]=d.d[c.id]||['','',null,null];return {...c,setId:id,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,k,p??ph),p,ph}});
 }
 
 // Booster réaliste : taille variable, ordre d'ouverture réel (énergie → communes → peu communes → reverse → rare), taux réglable
@@ -1473,7 +1474,7 @@ async function enrichCard(c,sid){
   let e=d.d[c.id];
   if(!e&&!c.ni){try{const x=await j(`${API}/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{};e=[x.rarity||'',x.category||'',m.trend??m.avg??null,m['trend-holo']??m['avg-holo']??null];d.d[c.id]=e;store.set(k,d)}catch(_){}}
   const [r,kc,p,ph]=e||['','',null,null];
-  return {...c,setId:sid,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,kc),p,ph}}
+  return {...c,setId:sid,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,kc,p??ph),p,ph}}
 window.zoomAny=async id=>{const sid=viewId,c=cardsOf(B[sid],sid).find(x=>x.id===id);if(!c)return;
   let e;try{e=await enrichCard(c,sid)}catch(_){e={...c,setId:sid,tier:c.ni?'SR':'C'}}zoom(e)};
 let MULT=0,MSUM=0,MTOT=0,MLAST=null;
@@ -1736,6 +1737,32 @@ html[data-theme=dark] #wlt{color:#ffd86b}
 .toast{border-radius:20px;background:color-mix(in srgb,var(--ink) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .tbox{border-radius:30px}
 </style>
+
+<script>
+/* v24 : images HD — remplace les scans trop petits, sinon les affine */
+(function(){
+const MIN=520,cache=new Map(),RX=/assets\.tcgdex\.net\/\w+\/([^/]+)\/([^/]+)\/([^/]+)\/high\.(?:webp|png)/;
+const ps=s=>s.replace(/^(sv|swsh|sm|xy|bw|dp|ex|me)0*(\d+)/,'$1$2').replace(/\.5$/,'pt5');
+const alt=u=>{const m=RX.exec(u);return m?`https://images.pokemontcg.io/${ps(m[2])}/${m[3]}_hires.png`:null};
+const load=(u,cors)=>new Promise((ok,ko)=>{const i=new Image();if(cors)i.crossOrigin='anonymous';i.onload=()=>ok(i);i.onerror=ko;i.src=u});
+function sharpen(d,w,h){const s=new Uint8ClampedArray(d.data),o=d.data,k=[0,-.4,0,-.4,2.6,-.4,0,-.4,0];
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const p=(y*w+x)*4;for(let c=0;c<3;c++){o[p+c]=s[p+c]*k[4]+s[p-4+c]*k[3]+s[p+4+c]*k[5]+s[p-w*4+c]*k[1]+s[p+w*4+c]*k[7]}}}
+async function enhance(im){const f=Math.max(2,Math.ceil(1100/im.naturalHeight)),w=im.naturalWidth*f,h=im.naturalHeight*f,c=document.createElement('canvas');c.width=w;c.height=h;
+ const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(im,0,0,w,h);
+ const d=x.getImageData(0,0,w,h);sharpen(d,w,h);x.putImageData(d,0,0);
+ return new Promise((ok,ko)=>c.toBlob(b=>b?ok(URL.createObjectURL(b)):ko(),'image/webp',.93))}
+function best(u){if(cache.has(u))return cache.get(u);
+ const p=(async()=>{let cur;try{cur=await load(u)}catch(e){return u}
+  if(cur.naturalWidth>=MIN)return u;
+  const a=alt(u);if(a){try{const i=await load(a);if(i.naturalWidth>cur.naturalWidth*1.4)return a}catch(e){}}
+  try{return await enhance(await load(u,true))}catch(e){return u}})();
+ cache.set(u,p);return p}
+function fix(el){if(el.tagName!=='IMG'||el.dataset.hd)return;const u=el.currentSrc||el.src;if(!RX.test(u))return;
+ best(u).then(n=>{if(n!==u&&el.isConnected&&(el.currentSrc||el.src)===u){el.dataset.hd=1;el.src=n}})}
+new MutationObserver(ms=>{for(const m of ms){if(m.type==='attributes')fix(m.target);else m.addedNodes.forEach(n=>{if(n.nodeType===1){fix(n);n.querySelectorAll&&n.querySelectorAll('img').forEach(fix)}})}})
+ .observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src']});
+})();
+</script>
 
 </body>
 </html>
