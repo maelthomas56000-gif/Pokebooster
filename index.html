@@ -1355,12 +1355,28 @@ const BASE='https://firestore.googleapis.com/v1/projects/poke-3342a/databases/(d
 const myId=()=>{let c=store.get('pid_v1',null);if(!c){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';c=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>A[x%A.length]).join('');store.set('pid_v1',c)}return c};
 const dec=s=>{s=(s||'').trim();if(!s.startsWith('PB1-'))throw 0;const o=JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));if(!o||typeof o.n!=='string')throw 0;return o};
 const name=()=>store.get(ME,{name:''}).name||'';
-const mine=()=>{const own=Object.values(col),b=stats.best;return {n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:b&&b.image?{n:b.name,i:b.image,p:b.price}:null,bt:store.get(BT,[]),v:3,a:store.get('av_v1',''),f:favs().slice(0,4).filter(id=>col[id].image).map(id=>({n:col[id].name,i:col[id].image})),d:Date.now()}};
+const real=u=>typeof u==='string'&&/^https?:\/\//.test(u);
+const cu=(c,q)=>{const u=c.gen||c.ni?null:(c.rp&&c.ri>=0&&RPU[c.ri])?RPU[c.ri]:c.image?c.image+'/'+q+'.webp':null;return real(u)?u:null};
+const av0=()=>store.get('av_v1','')||'';
+const mine=loc=>{const own=Object.values(col),top=own.reduce((a,c)=>(c.price||0)>((a&&a.price)||0)?c:a,null),a=av0(),ph=a.startsWith('data:')?a:'';
+  const m={n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,ver:4,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:top?{n:top.name,p:top.price||0,u:cu(top,'high'),i:real(top.image)?top.image:null}:null,bt:store.get(BT,[]),a:ph?'':a,f:favs().slice(0,4).map(id=>col[id]).map(c=>({n:c.name,u:cu(c,'low'),i:real(c.image)?c.image:null})).filter(x=>x.u),d:Date.now()};
+  return loc?{...m,L:top?img(top):null,ph}:m};
 let lastSig='';
-const push=async(force)=>{if(!name())return false;const m=mine(),sig=JSON.stringify({...m,d:0});if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>1800&&(m.bt.length||m.f.length)){if(m.bt.length)m.bt.pop();else m.f.pop()}try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{j:{stringValue:JSON.stringify(m)}}})});return r.ok}catch(e){lastSig='';return false}};
-const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json();return JSON.parse(d.fields.j.stringValue)};
-const card=(o,extra)=>`<div class="pc"><div class="av" style="width:56px;height:56px;font-size:24px;${o.a?`background:url('${esc(o.a)}/low.webp') 50% 18%/cover`:`background:hsl(${hue(o.n)} 55% 45%)`}">${o.a?'':esc((o.n[0]||'?').toUpperCase())}</div><b style="font-size:18px">${esc(o.n)}</b>${o.b?`<img class="fv" src="${esc(o.b.i)}/high.webp" alt="" onerror="this.remove()"><small>${esc(o.b.n)} · ${fmt(o.b.p)}</small>`:''}<div class="sg"><div><b>${o.p}</b><small>Boosters</small></div><div><b>${o.u}</b><small>Différentes</small></div><div><b>${o.t}</b><small>Total</small></div><div><b>${fmt(o.v)}</b><small>Valeur</small></div>${o.p?`<div><b>${fmt(o.v/o.p)}</b><small>Moy. / booster</small></div>`:''}${o.s!=null?`<div><b>${o.s} j</b><small>Série</small></div><div><b>${o.r||0}</b><small>Cartes UR/SR</small></div><div><b>${o.g||0}</b><small>God packs (taux normal)</small></div>`:''}</div>${o.o?((o.o.l>1||o.o.p>1||o.o.m)?`<small>⚠️ Options activées : chance ×${o.o.l} · God pack ${o.o.p} %${o.o.m?' · cartes manquantes':''}</small>`:'<small>✓ Taux de drop normaux</small>'):''}${o.f&&o.f.length?`<div style="display:flex;gap:6px;justify-content:center;margin:6px 0">${o.f.map(x=>`<img src="${esc(x.i)}/low.webp" alt="" style="width:52px;border-radius:5px" onerror="this.remove()">`).join('')}</div><small>⭐ Cartes favorites</small>`:''}${extra||''}</div>`;
-let ok=null;
+const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30);if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>1800&&(m.bt.length||m.f.length)){if(m.bt.length)m.bt.pop();else m.f.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});return r.ok}catch(e){lastSig='';return false}};
+const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json(),o=JSON.parse(d.fields.j.stringValue);if(d.fields.p&&d.fields.p.stringValue)o.ph=d.fields.p.stringValue;return o};
+const pAv=o=>o.ph||(o.a&&real(o.a)?o.a+'/low.webp':'');
+const okv=o=>!!(o.me||o.ver>=3);
+const avH=(o,s)=>{const u=pAv(o);return `<div class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s*.42)}px;${u?`background:#3a3470 url('${esc(u)}') 50% 18%/cover`:`background:linear-gradient(135deg,hsl(${hue(o.n)} 65% 55%),hsl(${(hue(o.n)+50)%360} 70% 45%));color:#fff`}">${u?'':esc((o.n[0]||'?').toUpperCase())}</div>`};
+const tile=(ic,v,l)=>`<div class="st"><i>${ic}</i><b>${v}</b><small>${l}</small></div>`;
+const card=(o,extra)=>{const v=okv(o),bu=o.me&&o.L?o.L:(o.b&&(o.b.u||(real(o.b.i)?o.b.i+'/high.webp':null)));
+  return `<div class="pf" style="--ph:${hue(o.n)}"><div class="pf-b"></div>${avH(o,92)}<div class="pf-n">${esc(o.n)}</div>
+  <div class="pf-v">${v?fmt(o.v):'—'}<small>Valeur de la collection</small></div>
+  ${o.b?`<div class="pf-bc">${bu?`<img src="${esc(bu)}" alt="" onerror="this.style.display='none'">`:`<div class="pf-ph">🃏</div>`}<div class="pf-chip">👑 ${esc(o.b.n)} · ${fmt(o.b.p)}</div><small>Carte la plus chère</small></div>`:''}
+  <div class="pg">${tile('📦',o.p,'Boosters')}${tile('🗂️',o.u,'Différentes')}${tile('🃏',o.t,'Total')}${tile('💎',v?fmt(o.v):'—','Valeur')}${tile('📈',v&&o.p?fmt(o.v/o.p):'—','Moy. / booster')}${o.s!=null?`${tile('🔥',o.s+' j','Série')}${tile('✨',o.r||0,'Cartes UR/SR')}${tile('🌟',o.g||0,'God packs (taux normal)')}`:''}</div>
+  ${o.o?((o.o.l>1||o.o.p>1||o.o.m)?`<div class="pf-t warn">⚠️ Options activées : chance ×${o.o.l} · God pack ${o.o.p} %${o.o.m?' · cartes manquantes':''}</div>`:'<div class="pf-t">✓ Taux de drop normaux</div>'):''}
+  ${o.f&&o.f.length?`<div class="pf-f">${o.f.map(x=>{const u=x.u||(real(x.i)?x.i+'/low.webp':'');return u?`<img src="${esc(u)}" alt="" onerror="this.remove()">`:''}).join('')}</div><small class="pf-fl">⭐ Cartes favorites</small>`:''}${extra||''}</div>`};
+let ok=null,lastPaint='';
+const sigP=()=>JSON.stringify([store.get(FR,[]).map(f=>({...f,d:0})),{...mine(),d:0},bh(),ok,name(),av0().length,av0().slice(-30)]);
 const bh=()=>store.get(BH,[]);
 const rec=code=>bh().filter(h=>h.f===code).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
 function resolve(l){
@@ -1394,12 +1410,13 @@ window.battleResults=function(){
 };
 const hc=(c,l)=>`<div style="flex:1;text-align:center"><small>${l}</small>${c.i?`<img src="${esc(c.i)}/low.webp" alt="" style="width:64px;display:block;margin:4px auto;border-radius:6px" onerror="this.remove()">`:''}<small>${esc(c.n)}</small><b style="display:block">${fmt(sc(c))}</b></div>`;
 function paint(){
+  lastPaint=sigP();
   const fr=store.get(FR,[]),h=bh(),S0=sets.find(x=>x.id===setId),m=mine();
-  const lb=[{...m,me:1},...fr].sort((a,b)=>b.v-a.v);
+  const lb=[{...m,me:1},...fr].sort((a,b)=>(okv(b)?b.v:-1)-(okv(a)?a.v:-1));
   $.innerHTML=`<div class="soc"><h1>Amis</h1>
   <h2>Mon profil</h2>
   <input id="sn" maxlength="20" placeholder="Ton pseudo" value="${esc(name())}">
-  ${card(m)}
+  ${card({...mine(true),me:1})}
   <button class="lnk" id="sav">🖼️ Changer ma photo de profil</button>
   <p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne':''}</p>
   <button class="cta" id="sc">Copier mon code</button>
@@ -1407,12 +1424,12 @@ function paint(){
   <h2>Ajouter un ami</h2>
   <input id="si" placeholder="Code de ton ami" autocapitalize="characters">
   <button class="cta" id="sa">Ajouter</button>
-  ${fr.length?`<h2>Classement (valeur)</h2>${lb.map((o,i)=>`<div class="xlb${o.me?' me':''}"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc(o.n)}</span><b>${fmt(o.v)}</b></div>`).join('')}`:''}
+  ${fr.length?`<h2>Classement (valeur)</h2>${lb.map((o,i)=>`<div class="xlb${o.me?' me':''}"><span class="lbn"><em>${['🥇','🥈','🥉'][i]||i+1+'.'}</em>${avH(o,34)}${esc(o.n)}</span><b>${okv(o)?fmt(o.v):'—'}</b></div>`).join('')}`:''}
   <h2>Combats de boosters</h2>
   <p class="hint">Chacun ouvre un booster : le total de valeur le plus élevé gagne. Extension utilisée pour défier : <b>${esc(S0?S0.name:'—')}</b> (change-la dans Boosters).</p>
   ${h.length?h.slice(0,6).map(x=>`<div class="xlb" style="gap:8px;align-items:center"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'}</span>${hc(x.m,'Toi')}${hc(x.o,esc(x.fn))}</div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
   <h2>Mes amis (${fr.length})</h2><div class="xfl">
-  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`<small>${f.code?'Mis à jour':'Instantané'} le ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>${f.code&&f.v!==3?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
+  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`<small>${f.code?'Mis à jour':'Instantané'} le ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>${f.code&&!(f.ver>=3||f.v===3)?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':f.code&&!(f.ver>=3)?'<small>ℹ️ Ses stats exactes apparaîtront dès qu’il aura ouvert la nouvelle version</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
   document.getElementById('sav').onclick=pickAv;
   const $n=document.getElementById('sn');
   $n.onchange=async()=>{store.set(ME,{name:$n.value.trim()});await push();paint()};
@@ -1477,14 +1494,18 @@ function trade(d,c){if(BATTLE||TY)return;
     const sd=row.querySelector('#xsd');if(sd)sd.onclick=e=>{e.stopPropagation();const m=col[c.id];if(!m||m.count<2)return;const n=m.count-1;setWal(wal()+sell*n);m.count=1;toast('Doublons vendus +'+fmt(sell*n));save()};
     const by=row.querySelector('#xby');if(by)by.onclick=e=>{e.stopPropagation();if(col[c.id]||wal()<buy)return;setWal(wal()-buy);col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:v,count:1};toast('Carte achetée ! −'+fmt(buy));save()}}
   draw();d.appendChild(row)}
+function resizePhoto(file){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const S=160,c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d'),m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,S,S);res(c.toDataURL('image/jpeg',.78))};im.src=r.result};r.readAsDataURL(file)})}
 function pickAv(){const o=document.createElement('div');o.className='xbt';let q='';
+  const done=v=>{store.set('av_v1',v);lastSig='';o.remove();push(true);paint()};
   const ids=()=>Object.keys(col).filter(id=>col[id].image&&(!q||nrm(col[id].name).includes(nrm(q)))).slice(0,90);
   const draw2=()=>{o.querySelector('#ag').innerHTML=ids().map(id=>`<div class="g" style="--i:0;--tc:${tc(col[id])}" data-a="${id}"><img src="${img(col[id])}" alt=""></div>`).join('')||'<p class="empty">Aucune carte.</p>';
-    o.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>{store.set('av_v1',col[e.dataset.a].image);lastSig='';o.remove();push(true);paint()})};
-  o.innerHTML='<h2>Choisis une carte comme photo</h2><input class="srch" id="aq" type="search" placeholder="Rechercher" style="max-width:420px"><div class="grid" id="ag"></div><button class="lnk" id="ac2">Annuler</button><button class="lnk" id="ar">Retirer la photo</button>';
+    o.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>done(col[e.dataset.a].image))};
+  o.innerHTML='<div class="xbh"><button class="xcl" id="ac2" aria-label="Fermer">✕</button><h2>Photo de profil</h2></div><button class="cta" id="aph">📷 Importer une photo</button><input type="file" id="af" accept="image/*" hidden><h3>…ou choisis une de tes cartes</h3><input class="srch" id="aq" type="search" placeholder="Rechercher une carte" style="max-width:420px"><div class="grid" id="ag"></div><button class="lnk" id="ar">Retirer la photo</button>';
   document.body.appendChild(o);o.style.zIndex=70;draw2();
   o.querySelector('#aq').oninput=e=>{q=e.target.value;draw2()};o.querySelector('#ac2').onclick=()=>o.remove();
-  o.querySelector('#ar').onclick=()=>{store.set('av_v1','');lastSig='';o.remove();push(true);paint()}}
+  o.querySelector('#aph').onclick=()=>o.querySelector('#af').click();
+  o.querySelector('#af').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{done(await resizePhoto(f))}catch(_){toast('Photo illisible, essaie une autre image')}};
+  o.querySelector('#ar').onclick=()=>done('')}
 const THEMES=[['Classique'],['Minuit','dark',260,'#0f0d24'],['Océan','dark',200,'#08181f'],['Forêt','dark',140,'#0c1a12'],['Coucher de soleil','dark',18,'#1d0f12'],['Néon','dark',300,'#0a0516'],['Sakura','light',335,'#fbeef3'],['Sable','light',40,'#f6efe2']],XK='xth_v1';
 function applyX(){const r=document.documentElement.style,t=THEMES.find(x=>x[0]===store.get(XK,''));
   if(!t||!t[1]){r.removeProperty('--h');r.removeProperty('--bg');return}
@@ -1574,13 +1595,13 @@ async function refresh(repaint,force){
   if(busyR)return;busyR=1;
   try{ok=name()?await push(force):null;
     const l=store.get(FR,[]);
-    await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,o,{code:f.code,d:o.d||Date.now()})}catch(e){}}));
+    await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,{ph:''},o,{code:f.code,d:o.d||Date.now()})}catch(e){}}));
     resolve(l);store.set(FR,l);badge(l);
   }finally{busyR=0}
-  if(repaint&&screen==='social'&&!document.querySelector('.xbt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT'))paint();
+  if(repaint&&screen==='social'&&!document.querySelector('.xbt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT')&&sigP()!==lastPaint){const y=window.scrollY;paint();window.scrollTo(0,y)}
 }
 window.socialScreen=function(){paint();refresh(true,true)};
-setInterval(()=>{if(!document.hidden&&store.get(FR,[]).length)refresh(true)},20000);
+setInterval(()=>{if(!document.hidden&&store.get(FR,[]).length)refresh(true)},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh(true)});
 setTimeout(()=>refresh(false),2500);
 
@@ -1608,8 +1629,42 @@ const _ss=window.setScreen;window.setScreen=function(){_ss();
   g.insertAdjacentHTML('beforebegin','<button class="lnk" id="xsd2" style="width:100%">💰 Vendre les doublons de cette extension ('+n+')</button>');
   document.getElementById('xsd2').onclick=()=>sellDups(L,setScreen)};
 setTimeout(updWal,0);
+new MutationObserver(()=>document.body.classList.toggle('ovx',!!document.querySelector('.lb,.xbt,.ovl'))).observe(document.body,{childList:true,subtree:true});
 const _t=window.tearOpen;if(_t)window.tearOpen=function(){if(navigator.vibrate)navigator.vibrate(35);return _t.apply(this,arguments)};
 })();
 </script>
+<style>
+body.ovx #wlt{display:none!important}
+.soc input{color:var(--ink);background:var(--pan2);border:1px solid var(--bd);box-shadow:0 2px 10px var(--sh);font-weight:600}
+.soc input::placeholder{color:var(--mut);font-weight:500}
+.soc .xfl{grid-template-columns:1fr;gap:0}
+.pf{--ph:250;margin:12px 16px;padding:0 16px 18px;border-radius:30px;background:var(--pan2);border:1px solid var(--bd);box-shadow:0 16px 38px var(--sh);overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.pf-b{position:absolute;left:0;right:0;top:0;height:112px;background:radial-gradient(circle at 85% 0,#ffffff66,transparent 55%),linear-gradient(135deg,hsl(var(--ph) 80% 62%),hsl(calc(var(--ph) + 55) 85% 66%))}
+.pf>*{position:relative}.pf>.pf-b{position:absolute}
+.pf .av{margin-top:58px;border:4px solid var(--pan2);box-shadow:0 10px 24px var(--sh)}
+.pf-n{font-size:23px;font-weight:800;letter-spacing:-.3px;color:var(--ink);margin-top:-2px}
+.pf-v{font-size:30px;font-weight:800;line-height:1;background:linear-gradient(135deg,var(--g1),var(--g2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;display:flex;flex-direction:column;gap:4px}
+.pf-v small{font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;-webkit-text-fill-color:var(--mut);color:var(--mut)}
+.pf-bc{display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 4px;padding:18px 18px 12px;border-radius:24px;width:100%;background:radial-gradient(circle at 50% 35%,hsl(var(--ph) 85% 70%/.35),transparent 70%)}
+.pf-bc img{width:168px;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,.35),0 0 0 1px #0002,0 0 38px hsl(var(--ph) 90% 65%/.5)}
+.pf-ph{width:150px;height:210px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:52px;background:linear-gradient(135deg,hsl(var(--ph) 70% 75%),hsl(calc(var(--ph) + 50) 70% 60%))}
+.pf-chip{padding:7px 14px;border-radius:999px;background:linear-gradient(135deg,#ffe9a3,#f2b630);color:#3b2a00;font-weight:800;font-size:14px;box-shadow:0 4px 14px #f2c14e66}
+.pf-bc small,.pf-fl{color:var(--mut);font-weight:600}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.st{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 6px;border-radius:18px;background:color-mix(in srgb,var(--g1) 7%,transparent);border:1px solid var(--bd)}
+.st i{font-style:normal;font-size:19px}.st b{font-size:18px;color:var(--ink)}.st small{font-size:11px;color:var(--mut);font-weight:600}
+.pf-t{font-size:13px;font-weight:700;color:var(--ok);padding:6px 12px;border-radius:999px;background:color-mix(in srgb,var(--ok) 12%,transparent)}.pf-t.warn{color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent)}
+.pf-f{display:flex;gap:8px;justify-content:center}.pf-f img{width:56px;border-radius:7px;box-shadow:0 5px 12px var(--sh)}
+.pf small{color:var(--mut);font-weight:600}
+.pf .cta,.pf .lnk{width:100%;margin:2px 0}
+.soc .xlb{background:var(--pan2);border:1px solid var(--bd);box-shadow:0 3px 10px var(--sh);align-items:center;color:var(--ink)}
+.soc .xlb.me{outline:0;border-color:var(--gold);box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 45%,transparent)}
+.lbn{display:flex;align-items:center;gap:10px;font-weight:700}.lbn em{font-style:normal;width:26px;text-align:center}
+.pc{background:var(--pan2);border:1px solid var(--bd);box-shadow:0 10px 26px var(--sh);color:var(--ink)}
+.xbt{background:var(--bg)!important;color:var(--ink)}
+.xbt .xbh{width:100%;max-width:420px;display:flex;align-items:center;gap:12px}.xbt .xbh h2{margin:0}
+.xbt .xcl{width:42px;height:42px;border-radius:50%;border:1px solid var(--bd);background:var(--pan2);color:var(--ink);font-size:18px;box-shadow:0 2px 10px var(--sh)}
+.xbt .cta{width:100%;max-width:420px}.xbt h3{margin:6px 0 0;color:var(--mut);font-size:13px}
+</style>
 </body>
 </html>
