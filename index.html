@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f4f1ff">
 <script>if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))document.documentElement.classList.add('ios')</script>
+<script>try{if(localStorage.getItem('perf_v1')!=='"Max"')document.documentElement.classList.add('lite')}catch(e){document.documentElement.classList.add('lite')}</script>
 <style>html.ios *,html.ios *::before,html.ios *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;mix-blend-mode:normal!important;will-change:auto!important}html.ios #nav{background:rgba(255,255,255,.96)!important}html.ios *,html.ios *::before,html.ios *::after{filter:none!important;text-shadow:none!important;animation-iteration-count:1!important}</style>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -639,7 +640,7 @@ async function loadSet(id){
     try{const x=await j(`${API}/cards/${c.id}`),m=x.pricing?.cardmarket||{};
       d.d[c.id]=[x.rarity||'',x.category||'',m.trend??m.avg??null,m['trend-holo']??m['avg-holo']??null]}catch(e){}
     const p=document.getElementById('prog');if(p)p.textContent=`${++done}/${total}`}};
-  await Promise.all(Array.from({length:16},worker));
+  await Promise.all(Array.from({length:10},worker));
   if(total) store.set('d4'+cfg.lang+'_'+id,d);
   return cards.map(c=>{const [r,k,p,ph]=d.d[c.id]||['','',null,null];return {...c,setId:id,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,k,p??ph),p,ph}});
 }
@@ -732,7 +733,7 @@ function pickSet(id,scroll){
   const m=document.getElementById('meta'); if(m) m.textContent=s.name;
   const m2=document.getElementById('meta2'); if(m2){const n=Object.values(col).filter(c=>c.setId===id).length;m2.textContent=`${n} / ${B[id]?.c.length||s.cardCount?.total||'?'} cartes dans ta collection`}
   if(scroll) document.querySelector(`.pk[data-id="${id}"]`)?.scrollIntoView({inline:'center',block:'nearest',behavior:scroll===2?'auto':'smooth'});
-  clearTimeout(pickSet.t); pickSet.t=setTimeout(()=>{pre[id]||(pre[id]=loadSet(id).catch(()=>{delete pre[id]}))},1500);
+  clearTimeout(pickSet.t); pickSet.t=setTimeout(()=>{pre[id]||(pre[id]=loadSet(id).catch(()=>{delete pre[id]}))},2500);
 }
 
 const tryImg=urls=>new Promise(r=>{let i=0;const n=()=>{if(i>=urls.length)return r(null);const m=new Image(),u=urls[i++];m.onload=()=>r(u);m.onerror=n;m.src=u};n()});
@@ -756,7 +757,7 @@ function focusScreen(){
   <button class="cta" id="openb">Ouvrir le booster</button>`;
   const p=$.querySelector('.pk'),area=$.querySelector('.fpk');
   p.style.setProperty('--fs',Math.max(1.15,Math.min(1.62,(innerHeight-340)/330,(innerWidth-60)/190)).toFixed(2));
-  loadArt(p.querySelector('.art'),s.id);
+  if(!BOOST[s.id])loadArt(p.querySelector('.art'),s.id);
   const NS='http://www.w3.org/2000/svg';let g=null;
   const mkSvg=()=>{p.querySelectorAll('.cut').forEach(e=>e.remove());const v=document.createElementNS(NS,'svg');v.setAttribute('class','cut');v.setAttribute('viewBox','0 0 190 320');v.innerHTML='<polyline class="cg"/><polyline class="cw"/><polyline class="cd"/>';p.appendChild(v);return v};
   const drawCut=(svg,pts)=>{const t=pts.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');svg.querySelectorAll('polyline').forEach(e=>e.setAttribute('points',t))};
@@ -784,7 +785,7 @@ function focusScreen(){
 }
 
 function home(){
-  const IOS=document.documentElement.classList.contains('ios');
+  const IOS=true;
   {const v=vis();if(v.length&&!v.some(s=>s.id===setId))setId=v[0].id}
   $.innerHTML=`<div class="top"><img class="brand" data-h src="https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg" alt=""><h1 id="meta"></h1><div class="sub" id="meta2"></div></div>
   <div class="chips era">${ERAS.map(([k,t])=>`<button class="chip ${era===k?'on':''}" data-e="${k}">${t}</button>`).join('')}</div>
@@ -799,7 +800,7 @@ function home(){
     car.querySelectorAll('.pk').forEach(p=>{const r=p.getBoundingClientRect(),d=Math.abs(r.left+r.width/2-m);if(d<bd){bd=d;best=p}});
     if(best&&best.dataset.id!==setId){sfx.snap();pickSet(best.dataset.id)}},80)});
 
-  const fillPk=p=>{if(p.firstChild)return;const s=sets.find(x=>x.id===p.dataset.id);if(!s)return;const t=document.createElement('div');t.innerHTML=packHTML(s);p.innerHTML=t.firstElementChild.innerHTML;loadArt(p.querySelector('.art'),p.dataset.id)};
+  const fillPk=p=>{if(p.firstChild)return;const s=sets.find(x=>x.id===p.dataset.id);if(!s)return;const t=document.createElement('div');t.innerHTML=packHTML(s);p.innerHTML=t.firstElementChild.innerHTML;if(!BOOST[p.dataset.id])loadArt(p.querySelector('.art'),p.dataset.id)};
   const io=new IntersectionObserver(es=>es.forEach(en=>{
     if(IOS){if(en.isIntersecting)fillPk(en.target);else en.target.innerHTML='';return}
     if(!en.isIntersecting)return;io.unobserve(en.target);loadArt(en.target.querySelector('.art'),en.target.dataset.id)}),{root:car,rootMargin:IOS?'0px 450px':'0px 1500px'});
@@ -869,7 +870,7 @@ async function tearOpen(p,pts){
     const bc=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]);
     stats.gods=(stats.gods||0)+(GOD?1:0);stats.gn=(stats.gn||0)+(GOD&&(TY||cfg.gp<=1)?1:0);(stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:packVal,g:GOD?1:0});stats.hist.length=Math.min(stats.hist.length,20);
     if(!TY&&(!stats.best||(val(bc)||0)>stats.best.price)) stats.best={name:bc.name,price:val(bc)||0,image:bc.image};
-    store.set(KEY,col); store.set(SKEY,stats);}
+    persistSoon();}
     idx=0; busy=false; fx('#fff',0,true); ov.remove(); go('reveal');
   }catch(e){
     clearTimeout(tm); ovl&&ovl.remove(); delete pre[id]; busy=false;
@@ -957,11 +958,12 @@ async function pruneNoImg(){
     let i=0;
     const w=async()=>{while(i<todo.length){const x=todo[i++];
       try{const b=await brief(x.id);if(b.g){hideSet(x.id);document.querySelectorAll('.row[data-id="'+x.id+'"]').forEach(e=>e.remove())}}catch(e){}}};
-    await Promise.all([w(),w(),w(),w()]);
+    await Promise.all([w(),w()]);
   }finally{pruning=0}
 }
 let cq='',cera='all',csort='prog';
-const setTotal=s=>B[s.id]?.c.length||store.get('b9'+cfg.lang+'_'+s.id,null)?.c.length||s.cardCount?.total||0;
+const BC={};const bcache=id=>B[id]||(id in BC?BC[id]:(BC[id]=store.get('b9'+cfg.lang+'_'+id,null)));
+const setTotal=s=>{const b=bcache(s.id);return (b&&b.c.length)||s.cardCount?.total||0};
 function collRows(){
   const own=Object.values(col),nq=nrm(cq),cnt={};own.forEach(c=>cnt[c.setId]=(cnt[c.setId]||0)+1);
   let rows=sets.filter(s=>(cera==='all'||eraOf(s)===cera)&&(!nq||nrm(s.name).includes(nq))).map(s=>({s,n:setTotal(s),o:cnt[s.id]||0}));
@@ -972,7 +974,7 @@ function collRows(){
     :'<p class="empty">Aucune extension ne correspond.</p>';
 }
 function collection(){
-  sets.filter(x=>{const b=B[x.id]||store.get('b9'+cfg.lang+'_'+x.id,null);return b&&b.g}).forEach(x=>hideSet(x.id));
+  sets.filter(x=>{const b=bcache(x.id);return b&&b.g}).forEach(x=>hideSet(x.id));
   const own=Object.values(col),have=new Set(sets.map(eraOf));
   $.innerHTML=`<h1>Ma collection</h1><div class="sub">${own.length} cartes différentes<span class="pv"> · ${fmt(totalValue())}</span></div>
   <input class="srch" id="cq" type="search" placeholder="Rechercher une extension" value="${esc(cq)}" autocomplete="off" enterkeyhint="search">
@@ -982,7 +984,7 @@ function collection(){
   document.getElementById('cq').oninput=e=>{cq=e.target.value;document.getElementById('cl').innerHTML=collRows()};
   $.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{cera=b.dataset.e;collection()});
   $.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{csort=b.dataset.s;collection()});
-  pruneNoImg();
+  setTimeout(pruneNoImg,1500);
 }
 
 // ---------- Succès ----------
@@ -1025,6 +1027,9 @@ const TKEY='tycoon_v1';
 const TY0=()=>({money:30,life:0,run:0,packs:0,star:0,keep:true,set:null,acc:0,ev:{},lv:{neg:0,sell:0,luck:0,bulk:0,emp:0},best:0});
 let tyc=Object.assign(TY0(),store.get(TKEY,{}));tyc.lv=Object.assign(TY0().lv,tyc.lv);tyc.ev=tyc.ev||{};
 const saveT=()=>store.set(TKEY,tyc);
+let _pt=0;const persistNow=()=>{clearTimeout(_pt);_pt=0;store.set(KEY,col);store.set(SKEY,stats);store.set(TKEY,tyc)};
+const persistSoon=()=>{clearTimeout(_pt);_pt=setTimeout(persistNow,1500)};
+addEventListener('pagehide',persistNow);document.addEventListener('visibilitychange',()=>{if(document.hidden&&_pt)persistNow()});
 // Réglage de l'équilibrage : coût = base × croissance^niveau
 const UPG={
   neg:{n:'Négociation',ic:'🤝',max:20,base:60,g:1.3,d:l=>`Boosters −${l*2} % moins chers`,nx:l=>`−${(l+1)*2} %`},
@@ -1048,7 +1053,7 @@ async function tycPrep(id){
   const cards=await (pre[id]||(pre[id]=loadSet(id).catch(e=>{delete pre[id];throw e})));
   if(!cards.length||cards[0].gen){hideSet(id);throw new Error('noimg')}
   if(!tyc.ev[id]){
-    const S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1;cfg.miss=false;cfg.gp=1;cfg.rp=true;let t=0;const N=600;
+    const S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1;cfg.miss=false;cfg.gp=1;cfg.rp=true;let t=0;const N=300;
     try{for(let i=0;i<N;i++)t+=draw(cards,sz,is30(S0),isVint(S0)).reduce((s,c)=>s+cv(c),0)}finally{cfg.luck=L0;cfg.miss=M0;cfg.gp=G0;cfg.rp=R0}
     tyc.ev[id]=Math.round(t/N*100)/100;saveT();
   }
@@ -1076,7 +1081,7 @@ function tycRun(id,n){
   const cost=Math.round(price*n*100)/100;
   tyc.money+=rev-cost;tyc.life+=rev;tyc.run+=rev;tyc.packs+=n;
   if(top[0]&&top[0][1]>tyc.best)tyc.best=top[0][1];
-  store.set(KEY,col);store.set(SKEY,stats);saveT();
+  persistSoon();
   return{n,rev,cost,nc,nw,gods,top,profit:rev-cost};
 }
 function tycDraw(cards,S0){
@@ -1219,8 +1224,8 @@ function setScreen(){
       if(nq&&!nrm(c.name+' '+c.lid).includes(nq))return false;
       return flt==='all'||(flt==='dup'?(m&&m.count>1):(flt==='own')===!!m)});
     return list.length?list.map(c=>{const m=col[c.id];return m
-      ?`<div class="g" style="--i:0;--tc:${tc(m)}" onclick="zoomId('${c.id}')"><img src="${img(c)}" alt="${esc(c.name)}">${m.count>1?`<span class="badge">x${m.count}</span>`:''}</div>`
-      :`<div class="g miss" onclick="zoomAny('${c.id}')"><img src="${img(c)}" alt="${esc(c.name)}"><i>${esc(c.lid)}</i></div>`}).join('')
+      ?`<div class="g" style="--i:0;--tc:${tc(m)}" onclick="zoomId('${c.id}')"><img loading="lazy" decoding="async" src="${img(c)}" alt="${esc(c.name)}">${m.count>1?`<span class="badge">x${m.count}</span>`:''}</div>`
+      :`<div class="g miss" onclick="zoomAny('${c.id}')"><img loading="lazy" decoding="async" src="${img(c)}" alt="${esc(c.name)}"><i>${esc(c.lid)}</i></div>`}).join('')
       :'<p class="empty">Aucune carte ne correspond.</p>'};
   $.innerHTML=`<h1>${esc(s.name)}</h1>
   <div class="sub">${o.length} / ${cards.length} cartes · ${Math.round(100*o.length/cards.length)} % · ${(stats.bs&&stats.bs[viewId])||0} booster${((stats.bs&&stats.bs[viewId])||0)>1?'s':''} ouvert${((stats.bs&&stats.bs[viewId])||0)>1?'s':''}<span class="pv"> · ${fmt(v)}</span></div>
@@ -1485,10 +1490,11 @@ function decor(){const c=pack[idx];if(!c)return;const r=RANK[c.tier]||0,top=docu
 const _rv=window.reveal;window.reveal=function(){_rv();try{decor()}catch(e){}};
 const _rd=window.render;window.render=function(){if(screen==='xcustom'&&XS){const nav=document.getElementById('nav')||mkNav();nav.style.display='flex';$.className='nv fd';nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t==='col'));window.scrollTo(0,0);XS();return}XS=null;if(!['focus','reveal','results'].includes(screen)){MULT=0;MTOT=0}_rd();applyX();if(screen!=='reveal')document.body.classList.remove('rbg-4','rbg-5')};
 const RATE={};
-async function rates(sid){if(RATE[sid])return RATE[sid];const cards=await(pre[sid]||(pre[sid]=loadSet(sid))),S0=sets.find(x=>x.id===sid);
-  if(!S0||!cards.length||cards[0].gen)return null;const cnt={},N=3000;
-  fairDraw(()=>{for(let i=0;i<N;i++){new Set(drawNorm(cards,packSize(S0),is30(S0),isVint(S0)).map(c=>c.id)).forEach(k=>cnt[k]=(cnt[k]||0)+1)}});
-  return RATE[sid]={cnt,N}}
+async function rates(sid){if(RATE[sid])return RATE[sid];
+  return RATE[sid]=(async()=>{const cards=await(pre[sid]||(pre[sid]=loadSet(sid))),S0=sets.find(x=>x.id===sid);
+  if(!S0||!cards.length||cards[0].gen){delete RATE[sid];return null}const cnt={},N=1200;
+  for(let k=0;k<N;k+=100){fairDraw(()=>{for(let i=0;i<100;i++){new Set(drawNorm(cards,packSize(S0),is30(S0),isVint(S0)).map(c=>c.id)).forEach(q=>cnt[q]=(cnt[q]||0)+1)}});await new Promise(r=>setTimeout(r,0))}
+  return {cnt,N}})()}
 async function enrichCard(c,sid){
   const k='d4'+cfg.lang+'_'+sid;let d=store.get(k,null);if(!d||Date.now()-d.t>12096e5)d={t:Date.now(),d:{}};
   let e=d.d[c.id];
@@ -1660,7 +1666,7 @@ const _ss=window.setScreen;window.setScreen=function(){_ss();
   g.insertAdjacentHTML('beforebegin','<button class="lnk" id="xsd2" style="width:100%">💰 Vendre les doublons de cette extension ('+n+')</button>');
   document.getElementById('xsd2').onclick=()=>sellDups(L,setScreen)};
 setTimeout(updWal,0);
-new MutationObserver(()=>document.body.classList.toggle('ovx',!!document.querySelector('.lb,.xbt,.ovl'))).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(()=>document.body.classList.toggle('ovx',!!document.querySelector('.lb,.xbt,.ovl'))).observe(document.body,{childList:true});
 const _t=window.tearOpen;if(_t)window.tearOpen=function(){if(navigator.vibrate)navigator.vibrate(35);return _t.apply(this,arguments)};
 })();
 </script>
@@ -1795,7 +1801,7 @@ function best(u,min){const k=u+'|'+min;if(cache.has(k))return cache.get(k);
   if(cur.naturalWidth>=1000)return u;
   try{return await enhance(await load(u,true))}catch(e){return u}})();
  cache.set(k,p);return p}
-function fix(el){if(el.tagName!=='IMG')return;const u=el.currentSrc||el.src;if(!RX.test(u))return;
+function fix(el){if(el.tagName!=='IMG'||!(el.closest&&el.closest('.zc')))return;const u=el.currentSrc||el.src;if(!RX.test(u))return;
  const min=el.closest&&el.closest('.zc')?760:(el.closest&&el.closest('.sc')?680:MIN);
  best(u,min).then(n=>{if(n!==u&&el.isConnected&&(el.currentSrc||el.src)===u){el.dataset.hd=1;el.src=n}
   if(el.closest&&el.closest('.zc')&&!el.classList.contains('rl')){const k=n===u?'TCGdex':n.startsWith('blob:')?'agrandie':/pokemontcg/.test(n)?'pokemontcg.io':'autre',i=new Image();i.onload=()=>dbg(k+' '+i.naturalWidth+'x'+i.naturalHeight);i.src=n}})}
@@ -1808,7 +1814,7 @@ new MutationObserver(ms=>{for(const m of ms){if(m.type==='attributes')fix(m.targ
 /* Effets d'ouverture des boosters (canvas léger, compatible iOS) */
 (function(){try{
 const OK='ofx_v1',OF=['Aucun','Étincelles','Confettis','Cœurs','Éclair'];
-const ios=document.documentElement.classList.contains('ios');
+const ios=document.documentElement.classList.contains('ios')||document.documentElement.classList.contains('lite');
 const rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const R=(a,b)=>a+Math.random()*(b-a);
 function burst(x,y,kind){if(rm||kind==='Aucun')return;
@@ -1882,7 +1888,7 @@ window.settingsScreen=function(){prev.apply(this,arguments);try{const row=docume
 <script>
 /* Univers visuels + décor animé réactif + mascottes attachantes */
 (function(){try{
-const ios=document.documentElement.classList.contains('ios'),rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ios=document.documentElement.classList.contains('ios')||document.documentElement.classList.contains('lite'),rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const R=(a,b)=>a+Math.random()*(b-a),P=a=>a[Math.random()*a.length|0],S=Math.sin,C=Math.cos,TAU=6.283;
 const U={
 'Classique':{e:'🎴',mk:'Mousse',k:[],n:[]},
@@ -2181,7 +2187,7 @@ function mascot(){mk=mkKey();hideMenu();closePanel();stopWalk();if(el){el.remove
  const fx=store.get('mc_x',null);X=fx==null?8:Math.max(0,Math.min(innerWidth-sz,fx*innerWidth));
  el=document.createElement('div');el.setAttribute('aria-hidden','true');el.style.cssText='position:fixed;left:'+X+'px;bottom:'+GY()+'px;width:'+sz+'px;height:'+sz+'px;z-index:40;cursor:grab;touch-action:none;transition:transform .3s;transform-origin:50% 100%';
  wr=document.createElement('div');wr.style.cssText='width:100%;height:100%;transform-origin:50% 100%';
- bd=document.createElement('div');bd.style.cssText='width:100%;height:100%;transform-origin:50% 100%;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))';
+ bd=document.createElement('div');bd.style.cssText='width:100%;height:100%;transform-origin:50% 100%';
  const sh=document.createElement('div');sh.className='mcsh';sh.style.cssText='position:absolute;left:14%;right:14%;bottom:-3px;height:8px;border-radius:50%;background:rgba(0,0,0,.3);pointer-events:none;transition:opacity .2s';
  lab=document.createElement('div');lab.style.cssText='position:absolute;top:-13px;white-space:nowrap;font:800 9px system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.5);padding:1px 6px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none';
  bub=document.createElement('div');bub.style.cssText='position:absolute;width:max-content;max-width:min(150px,46vw);font:700 11px/1.2 system-ui,sans-serif;background:rgba(255,255,255,.94);color:#24212f;padding:4px 8px;border-radius:10px 10px 10px 3px;opacity:0;transform:scale(.8);transition:opacity .25s,transform .25s;pointer-events:none;box-shadow:0 3px 10px #0005;z-index:3';
@@ -2247,5 +2253,33 @@ setTimeout(()=>{if(!el)return;tick();const hr=new Date().getHours(),n=stats.pack
 .pk.on.rp::after{height:18px;bottom:-14px;background:radial-gradient(ellipse,rgba(0,0,0,.3),transparent 70%)}
 .mcm .bt button{width:32px;height:32px;font-size:16px}
 </style>
+<style>
+/* Performances */
+.row{content-visibility:auto;contain-intrinsic-size:auto 76px}
+html.lite *,html.lite *::before,html.lite *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.lite #nav,html.lite #wlt{background:var(--pan2,#fff)!important}
+html.lite .row,html.lite .stc,html.lite .chip,html.lite .back,html.lite .srch,html.lite .pc{background-color:var(--pan2,#fff)!important}
+html.lite .row,html.lite .stc{box-shadow:0 3px 10px var(--sh)!important}
+html.lite .rl,html.lite .tx,html.lite .gl{display:none!important}
+html.lite .row::before,html.lite .stc::before,html.lite .stc::after{display:none!important}
+html.lite body::before,html.lite .cta,html.lite .cta::after,html.lite .bar i::after,html.lite .g.last,html.lite .sc.godc,html.lite .sc.gold::after,html.lite .pf-b::after,html.lite .pres.on i{animation:none!important}
+html.lite .g.last{box-shadow:0 0 0 3px var(--pan2),0 0 0 5px var(--g1)!important}
+html.lite .sc.godc{box-shadow:0 0 0 2px #ffe14d,0 0 26px 6px rgba(255,210,70,.55)!important}
+html.lite .bar i{box-shadow:none!important}
+html.lite .pk:not(.on) *,html.lite .pk:not(.on)::before,html.lite .pk:not(.on)::after{animation:none!important}
+html.lite .pk,html.lite .pk.on,html.lite .pk.on.rp,html.lite .rpk{filter:none!important}
+html.lite .stack::before{filter:none!important;opacity:.22}
+html.lite .p{box-shadow:none!important}
+</style>
+<script>
+(function(){try{
+const prev=window.settingsScreen;
+window.settingsScreen=function(){prev.apply(this,arguments);try{
+ const h=$.querySelector('h1');if(!h)return;const m=document.documentElement.classList.contains('lite')?'Fluide':'Max';
+ h.insertAdjacentHTML('afterend','<div class="row st"><div class="t"><b>Performances</b><small>Fluide : supprime les effets lourds (flous, reflets animés, ombres animées) pour une appli plus rapide. Max : tous les effets.</small><div class="chips" style="flex-wrap:wrap;margin-top:8px">'+['Fluide','Max'].map(n=>'<button class="chip '+(m===n?'on':'')+'" data-pf="'+n+'">'+n+'</button>').join('')+'</div></div></div>');
+ $.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{store.set('perf_v1',b.dataset.pf);if(b.dataset.pf==='Fluide')document.documentElement.classList.add('lite');else document.documentElement.classList.remove('lite');window.settingsScreen()})
+}catch(e){}};
+}catch(e){}})();
+</script>
 </body>
 </html>
