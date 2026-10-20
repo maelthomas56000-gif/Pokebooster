@@ -733,6 +733,8 @@ async function preloadHome(){
   await Promise.all(jobs);
 }
 const BRAND='https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg';
+const KEEP={};function keepImg(u){if(!u||KEEP[u])return;try{const i=new Image();i.decoding='async';i.src=u;KEEP[u]=i;if(i.decode)i.decode().catch(()=>{})}catch(e){}}
+function warmFocus(id){try{const s=sets.find(x=>x.id===id);if(!s)return;keepImg(BRAND);if(s.logo)keepImg(s.logo+'.png');if(BOOST[id])keepImg(BOOST[id]);else{const u=store.get('art5'+cfg.lang+'_'+id,null);if(u)keepImg(u)}}catch(e){}}
 function packHTML(s,on=''){
   return `<div class="pk ${on}${BOOST[s.id]?' rp':''}" data-id="${s.id}" style="--ph:${hue(s.id)}"><div class="px2"><i class="cz"></i><i class="age">6+</i><img class="plg" data-h alt="" src="${BRAND}"><div class="art"></div><div class="lg2">${s.logo?`<img data-h data-ln="${esc(s.name)}" src="${s.logo}.png" alt="">`:`<span class="ln">${esc(s.name)}</span>`}</div><div class="inf"><b>${packSize(s)}</b><span>ADDITIONAL GAME CARDS</span><i class="pb"></i></div><i class="cz bt"></i><i class="gl2"></i></div>${boostImg(s.id)}</div>`;
 }
@@ -761,6 +763,7 @@ async function loadArt(a,id){
 
 // Booster choisi : grand format, on le swipe vers le haut pour le déchirer
 function focusScreen(){
+  $.classList.remove('fd');warmFocus(setId);
   const s=sets.find(x=>x.id===setId);
   $.innerHTML=`<div class="fh"><button class="back" onclick="${BATTLE?"BATTLE=null;go('social')":"go(TY?'tycoon':fromSet==='list'?'collection':fromSet?'set':'home')"}">${BATTLE?'‹ Amis':TY?'‹ Tycoon':fromSet==='list'?'‹ Collection':fromSet?'‹ '+esc(s.name):'‹ Boosters'}</button></div>
   <div class="center fpk">${packHTML(s,'on foc')}</div>
@@ -792,7 +795,7 @@ function focusScreen(){
   area.onpointerup=up;area.onpointercancel=up;
   let zz=0;$.querySelector('#openb').onclick=()=>{if(busy||zz||g)return;zz=1;p.style.animationPlayState='paused';
     const svg=mkSvg(),N=26,pts=[];for(let i=0;i<=N;i++){const t=i/N;pts.push([-12+t*214,50+Math.sin(t*9)*3])}
-    const t0=performance.now(),st=n=>{const k=Math.min(1,(n-t0)/480);drawCut(svg,pts.slice(0,Math.max(2,Math.round(k*N)+1)));if(k<1)requestAnimationFrame(st);else{zz=0;tearOpen(p,pts)}};requestAnimationFrame(st)};
+    const t0=performance.now(),st=n=>{const k=Math.min(1,(n-t0)/320);drawCut(svg,pts.slice(0,Math.max(2,Math.round(k*N)+1)));if(k<1)requestAnimationFrame(st);else{zz=0;tearOpen(p,pts)}};requestAnimationFrame(st)};
 }
 
 function home(){
@@ -850,22 +853,22 @@ async function tearOpen(p,pts){
   const poly=l=>'polygon('+l.map(q=>f1(q[0])+'px '+f1(q[1])+'px').join(',')+')';
   // lumière qui jaillit le long de la coupe + cartes qui apparaissent
   ov.innerHTML=`<svg style="position:absolute;inset:0;width:100%;height:100%"><polyline class="lt" points="${path.map(q=>scr(q).map(f1).join(',')).join(' ')}"/></svg><div class="cbk" style="left:${cx-75}px;top:${cy-105}px"></div><div class="cbk" style="left:${cx-75}px;top:${cy-105}px"></div>`;
-  ov.querySelector('.lt').animate([{strokeWidth:'6px',opacity:.3},{strokeWidth:'46px',opacity:1,offset:.35},{strokeWidth:'96px',opacity:0}],{duration:1000,easing:'ease-out',fill:'forwards'});
+  ov.querySelector('.lt').animate([{strokeWidth:'6px',opacity:.3},{strokeWidth:'46px',opacity:1,offset:.35},{strokeWidth:'96px',opacity:0}],{duration:750,easing:'ease-out',fill:'forwards'});
   const cbs=ov.querySelectorAll('.cbk');
-  cbs.forEach((c,i)=>c.animate([{opacity:0,transform:'scale(.7) rotate(0deg)'},{opacity:1,transform:`scale(1.02) rotate(${i?5:-4}deg)`,offset:.45},{opacity:0,transform:`scale(1.3) rotate(${i?5:-4}deg)`}],{duration:950,delay:150+i*110,easing:'ease-out',fill:'both'}));
+  cbs.forEach((c,i)=>c.animate([{opacity:0,transform:'scale(.7) rotate(0deg)'},{opacity:1,transform:`scale(1.02) rotate(${i?5:-4}deg)`,offset:.45},{opacity:0,transform:`scale(1.3) rotate(${i?5:-4}deg)`}],{duration:700,delay:100+i*80,easing:'ease-out',fill:'both'}));
   // les deux moitiés du booster, découpées exactement le long du trait du doigt
   const piece=(pl,n,sgn)=>{
     const w=document.createElement('div');w.className='pcw';w.style.cssText=`left:${cx-95}px;top:${cy-160}px;transform-origin:${95+(mid[0]-95)*k}px ${160+(mid[1]-160)*k}px`;
     const c=p.cloneNode(true);c.style.animation='none';c.style.translate=getComputedStyle(p).translate;c.style.visibility='visible';c.style.clipPath=poly(pl);
     w.appendChild(c);ov.appendChild(w);
-    w.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:`translate(${n[0]*110}px,${n[1]*110}px) rotate(${sgn*5}deg)`,opacity:1,offset:.45},{transform:`translate(${n[0]*300}px,${n[1]*300}px) rotate(${sgn*14}deg)`,opacity:0}],{duration:1000,delay:170,easing:'cubic-bezier(.35,0,.7,.5)',fill:'forwards'})};
+    w.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:`translate(${n[0]*110}px,${n[1]*110}px) rotate(${sgn*5}deg)`,opacity:1,offset:.45},{transform:`translate(${n[0]*300}px,${n[1]*300}px) rotate(${sgn*14}deg)`,opacity:0}],{duration:750,delay:100,easing:'cubic-bezier(.35,0,.7,.5)',fill:'forwards'})};
   piece(A,nA,1);piece(B,nB,-1);
   p.style.visibility='hidden';
   const t=pre[id]||(pre[id]=loadSet(id));
   sfx.tear(); fx('#ffd166',26,false); navigator.vibrate&&navigator.vibrate([30,30,60]);
   let ovl; const tm=setTimeout(()=>{ovl=document.createElement('div');ovl.className='ovl';ovl.innerHTML='<div class="spin"></div>Préparation de l\'extension… <span id="prog"></span><small style="color:#9a95c8;font-weight:500">Une seule fois par extension</small>';document.body.appendChild(ovl)},1000);
   try{
-    const [cards]=await Promise.all([t,new Promise(r=>setTimeout(r,1150))]);
+    const [cards]=await Promise.all([t,new Promise(r=>setTimeout(r,800))]);
     if(cards.length&&cards[0].gen){clearTimeout(tm);ovl&&ovl.remove();ov.remove();busy=false;hideSet(id);toast('Cette extension n’a pas d’images disponibles : elle a été retirée de la liste.');go('home');return}
     clearTimeout(tm); ovl&&ovl.remove();
     const S0=sets.find(x=>x.id===id)||{id,name:''};pack=TY?tycDraw(cards,S0):BATTLE?fairDraw(()=>draw(cards,packSize(S0),is30(S0),isVint(S0))):draw(cards,packSize(S0),is30(S0),isVint(S0)); if(pack.length<1) throw 0;
@@ -879,7 +882,7 @@ async function tearOpen(p,pts){
      if(stats.last!==td){stats.streak=stats.last===d(1)?(stats.streak||0)+1:1;stats.last=td;stats.bst=Math.max(stats.bst||0,stats.streak)}
      (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+1}
     const bc=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]);
-    stats.gods=(stats.gods||0)+(GOD?1:0);stats.gn=(stats.gn||0)+(GOD&&(TY||cfg.gp<=1)?1:0);(stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:packVal,g:GOD?1:0});stats.hist.length=Math.min(stats.hist.length,20);
+    stats.gods=(stats.gods||0)+(GOD?1:0);stats.gn=(stats.gn||0)+(GOD&&(TY||cfg.gp<=1)?1:0);(stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:packVal,g:GOD?1:0,d:Date.now()});stats.hist.length=Math.min(stats.hist.length,500);
     if(!TY&&(!stats.best||(val(bc)||0)>stats.best.price)) stats.best={name:bc.name,price:val(bc)||0,image:bc.image};
     persistSoon();}
     idx=0; busy=false; fx('#fff',0,true); ov.remove(); go('reveal');
@@ -951,6 +954,7 @@ document.addEventListener('keydown',e=>{
 // ---------- Résultats ----------
 function results(){
   if(BATTLE&&window.battleResults)return window.battleResults();
+  warmFocus(setId);
   L=pack; const best=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]);
   $.innerHTML=`<h1>${GOD?'✦ GOD PACK ✦':'Ton tirage'}</h1><p class="big pv">${fmt(packVal)}</p>
   <div class="sub">Meilleure carte : ${esc(best.name)}<span class="pv"> · ${fmt(val(best))}</span></div>
@@ -1364,10 +1368,7 @@ body.rbg-4{background:radial-gradient(circle at 50% 38%,#2b1550,#07040f 72%)!imp
 body.rbg-5{background:radial-gradient(circle at 50% 38%,#4d3600,#060300 72%)!important}
 body.rbg-4::after,body.rbg-5::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(1.6px 1.6px at 12% 22%,#fff,transparent),radial-gradient(1.2px 1.2px at 78% 14%,#fff,transparent),radial-gradient(1.8px 1.8px at 38% 68%,#fff,transparent),radial-gradient(1.2px 1.2px at 88% 58%,#fff,transparent),radial-gradient(1.4px 1.4px at 22% 88%,#fff,transparent),radial-gradient(1.6px 1.6px at 62% 40%,#fff,transparent),radial-gradient(1.2px 1.2px at 50% 8%,#fff,transparent),radial-gradient(1.4px 1.4px at 94% 90%,#fff,transparent);animation:xtw 3.2s infinite}
 img.xgr{filter:grayscale(1) brightness(.55)!important}
-.nv.fd{animation:xfd .22s ease-out}@keyframes xfd{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-button,.row,.g,.chip{touch-action:manipulation;transition:transform .12s,opacity .2s}button:active,.row:active,.g:active{transform:scale(.97)}
 .car{overflow-y:hidden}.pk .strip,.pk .shine{overflow:hidden;max-width:100%}
-html body *,html body *::before,html body *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 html.ios .g.miss img{filter:grayscale(1) brightness(.35)!important}
 #nav button[data-t=soc]{position:relative}.xbd{position:absolute;top:0;right:10px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#ff4d6d;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
 @media (min-width:900px){
@@ -1402,9 +1403,9 @@ const av0=()=>store.get('av_v1','')||'';
 const mine=loc=>{const own=Object.values(col),top=own.reduce((a,c)=>(c.price||0)>((a&&a.price)||0)?c:a,null),a=av0(),ph=a.startsWith('data:')?a:'';
   const m={n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,ver:4,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:top?{n:top.name,p:top.price||0,u:cu(top,'high'),i:real(top.image)?top.image:null}:null,bt:store.get(BT,[]),a:ph?'':a,f:favs().slice(0,4).map(id=>col[id]).map(c=>({n:c.name,u:cu(c,'low'),i:real(c.image)?c.image:null})).filter(x=>x.u),d:Date.now()};
   return loc?{...m,L:top?img(top):null,ph}:m};
-let lastSig='';
-const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30);if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>1800&&(m.bt.length||m.f.length)){if(m.bt.length)m.bt.pop();else m.f.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});return r.ok}catch(e){lastSig='';return false}};
-const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json(),o=JSON.parse(d.fields.j.stringValue);if(d.fields.p&&d.fields.p.stringValue)o.ph=d.fields.p.stringValue;return o};
+let lastSig='';window.xpush=f=>push(f);
+const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30)+(window.tradeDoc?JSON.stringify(window.tradeDoc()):'');if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>1800&&(m.bt.length||m.f.length)){if(m.bt.length)m.bt.pop();else m.f.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};const td=window.tradeDoc?window.tradeDoc():null;if(td)fields.t={stringValue:JSON.stringify(td)};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});return r.ok}catch(e){lastSig='';return false}};
+const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json(),o=JSON.parse(d.fields.j.stringValue);if(d.fields.p&&d.fields.p.stringValue)o.ph=d.fields.p.stringValue;o.tr=null;if(d.fields.t&&d.fields.t.stringValue){try{o.tr=JSON.parse(d.fields.t.stringValue)}catch(e){}}return o};
 const pAv=o=>o.ph||(o.a&&real(o.a)?o.a+'/low.webp':'');
 const okv=o=>!!(o.me||o.ver>=3);
 const avH=(o,s)=>{const u=pAv(o);return `<div class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s*.42)}px;${u?`background:#3a3470 url('${esc(u)}') 50% 18%/cover`:`background:linear-gradient(135deg,hsl(${hue(o.n)} 65% 55%),hsl(${(hue(o.n)+50)%360} 70% 45%));color:#fff`}">${u?'':esc((o.n[0]||'?').toUpperCase())}</div>`};
@@ -1490,10 +1491,11 @@ function paint(){
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=store.get(FR,[]);l.splice(+b.dataset.del,1);store.set(FR,l);paint()});
   document.querySelectorAll('[data-fight]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");fight(fr[+b.dataset.fight],null)});
   document.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");const f=fr[+b.dataset.resp];fight(f,f.pend)});
+  window.tradeUI&&window.tradeUI(fr);
 }
-const SIL=new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');SIL.loop=true;
-const unlock=()=>{try{SIL.play().catch(()=>{});const a=ac();if(a){a.resume&&a.resume();const b=a.createBuffer(1,1,22050),o=a.createBufferSource();o.buffer=b;o.connect(a.destination);o.start(0)}}catch(e){}};
-['touchstart','touchend','click'].forEach(e=>document.addEventListener(e,unlock,{passive:true}));
+const isI=/iPhone|iPad|iPod/.test(navigator.userAgent),SIL=isI?new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='):null;if(SIL)SIL.loop=true;
+let unl=false;const unlock=()=>{if(unl)return;unl=true;['touchend','click'].forEach(e=>document.removeEventListener(e,unlock));try{if(SIL)SIL.play().catch(()=>{});const a=ac();if(a){a.resume&&a.resume();const b=a.createBuffer(1,1,22050),o=a.createBufferSource();o.buffer=b;o.connect(a.destination);o.start(0)}}catch(e){}};
+['touchend','click'].forEach(e=>document.addEventListener(e,unlock,{passive:true}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){try{const a=ac();a&&a.resume&&a.resume()}catch(e){}}});
 function tint(el,src){const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=16;const x=c.getContext('2d');x.drawImage(im,0,0,16,16);const d=x.getImageData(0,0,16,16).data;let sa=0,sb=0;for(let i=0;i<d.length;i+=4){const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),t=mx-mn;if(t<.25||mx<.35)continue;let h=mx==r?((g-b)/t)%6:mx==g?(b-r)/t+2:(r-g)/t+4;h*=Math.PI/3;sa+=Math.cos(h)*t;sb+=Math.sin(h)*t}if(!sa&&!sb)return;const h=(Math.atan2(sb,sa)*180/Math.PI+360)%360;el.style.setProperty('--fx','hsl('+Math.round(h)+' 95% 62%)');if(h>=35&&h<=65)el.classList.add('gold')}catch(e){}};im.src=src}
 function decor(){const c=pack[idx];if(!c)return;const r=RANK[c.tier]||0,top=document.getElementById('top'),b=document.body.classList;
@@ -1600,6 +1602,19 @@ async function xDex(){
   <div class="grow"></div><button class="cta" onclick="go('collection')">Retour</button>`;
   document.querySelectorAll('[data-g]').forEach(e=>e.onclick=()=>{xg=+e.dataset.g;openX(xDex)});
   document.querySelectorAll('[data-d]').forEach(e=>e.onclick=()=>toast('#'+e.dataset.d+' '+e.dataset.n+(own[e.dataset.d]?' · '+own[e.dataset.d]+' carte(s)':' · pas encore obtenu')))}
+const DG='diag_v1';let dgEl=null,dg={in:0,pt:0,lt:0,ltn:'',rd:0};
+const dgOn=()=>store.get(DG,false);
+function dgShow(){if(!dgOn())return;if(!dgEl){dgEl=document.createElement('div');dgEl.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(0,0,0,.85);color:#7CFC00;font:12px/1.4 monospace;padding:6px 8px;pointer-events:none;white-space:pre';document.body.appendChild(dgEl)}
+  dgEl.textContent='Attente avant réaction : '+Math.round(dg.in)+' ms\nAffichage après clic : '+Math.round(dg.pt)+' ms\nConstruction écran : '+Math.round(dg.rd)+' ms\nPlus longue tâche : '+Math.round(dg.lt)+' ms '+(dg.ltn||'')}
+document.addEventListener('click',e=>{if(!dgOn())return;dg.in=performance.now()-e.timeStamp;dg.lt=0;dg.ltn='';const t=performance.now();requestAnimationFrame(()=>requestAnimationFrame(()=>{dg.pt=performance.now()-t;dgShow()}))},true);
+const _rdg=window.render;window.render=function(){if(!dgOn())return _rdg.apply(this,arguments);const t=performance.now(),r=_rdg.apply(this,arguments);dg.rd=performance.now()-t;return r};
+try{new PerformanceObserver(l=>l.getEntries().forEach(x=>{if(x.duration>dg.lt){dg.lt=x.duration;dg.ltn=(x.attribution&&x.attribution[0]&&x.attribution[0].name)||''}})).observe({entryTypes:['longtask']})}catch(e){}
+const _sdg=window.settingsScreen;window.settingsScreen=function(){_sdg.apply(this,arguments);try{const h=$.querySelector('h1');if(!h)return;const on=dgOn();
+  h.insertAdjacentHTML('afterend',`<div class="row st"><div class="t"><b>Diagnostic de lenteur</b><small>Affiche en haut de l'écran le temps de réaction à chaque clic. À utiliser pour m'envoyer une capture.</small></div><button class="chip ${on?'on':''}" id="xdg">${on?'Activé':'Désactivé'}</button></div>`);
+  document.getElementById('xdg').onclick=()=>{const v=!dgOn();store.set(DG,v);if(!v&&dgEl){dgEl.remove();dgEl=null}settingsScreen()}}catch(e){}};
+let _ak='',_av='';const _ah=window.achHTML;
+if(typeof _ah==='function')window.achHTML=function(own,tot,by){const k=[tot,own.length,stats.packs,stats.gn,stats.last,stats.streak,stats.bst,Object.keys(stats.sp||{}).length,sets.length,Object.keys(BC).length,tyc.life,tyc.star,tyc.packs].join('|');if(k===_ak&&_av)return _av;const h=_ah.apply(this,arguments);_ak=k;_av=h;return h};
+(function warm(){if(!sets||!sets.length){setTimeout(warm,1500);return}let i=0;const step=()=>{const t=performance.now();while(i<sets.length&&performance.now()-t<8){try{bcache(sets[i].id)}catch(e){}i++}if(i<sets.length)setTimeout(step,60)};setTimeout(step,2500)})();
 let XS=null,xi=0,xq='';
 const openX=fn=>{XS=fn;screen='xcustom';render()};
 const gc=id=>`<div class="g" style="--i:0;--tc:${tc(col[id])}" onclick="zoom(col['${id}'])"><img src="${img(col[id])}" alt=""></div>`;
@@ -1641,14 +1656,14 @@ const _z=window.zoom;window.zoom=function(c){_z(c);if(!c)return;const d=document
   rates(sid).then(r=>{if(!r||!d.isConnected)return;const n=r.cnt[c.id]||0,pc=n/r.N*100,t=n?'🎲 Drop : ≈ '+(pc<1?pc.toFixed(2):pc.toFixed(1)).replace('.',',')+' % par booster (1 sur '+Math.round(r.N/n)+')':'🎲 Drop : moins de 1 sur '+r.N+' (très rare)';
     const h=document.createElement('div');h.className='hint';h.textContent=t;const x=d.querySelector('.px');(x||d.lastElementChild).insertAdjacentElement('afterend',h)}).catch(()=>{})};
 let busyR=0,lastP=0;
-function badge(l){const n=l.filter(f=>f.pend).length,nav=document.getElementById('nav'),bt=nav&&nav.querySelector('button[data-t=soc]');if(!bt)return;let b=bt.querySelector('.xbd');if(!n){if(b)b.remove();return}if(!b){b=document.createElement('span');b.className='xbd';bt.appendChild(b)}b.textContent=n;
-  if(n>lastP){const f=l.find(x=>x.pend);toast('⚔️ '+(f?f.n:'Un ami')+' te défie !');if(navigator.vibrate)navigator.vibrate([80,60,80])}lastP=n}
+function badge(l){const n=l.filter(f=>f.pend).length+(window.tradeIn?window.tradeIn(l):0),nav=document.getElementById('nav'),bt=nav&&nav.querySelector('button[data-t=soc]');if(!bt)return;let b=bt.querySelector('.xbd');if(!n){if(b)b.remove();return}if(!b){b=document.createElement('span');b.className='xbd';bt.appendChild(b)}b.textContent=n;
+  if(n>lastP){const f=l.find(x=>x.pend);toast(f?'⚔️ '+f.n+' te défie !':'🔄 Nouvelle proposition d’échange !');if(navigator.vibrate)navigator.vibrate([80,60,80])}lastP=n}
 async function refresh(repaint,force){
   if(busyR)return;busyR=1;
   try{ok=name()?await push(force):null;
     const l=store.get(FR,[]);
     await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,{ph:''},o,{code:f.code,d:o.d||Date.now()})}catch(e){}}));
-    resolve(l);store.set(FR,l);badge(l);
+    resolve(l);store.set(FR,l);if(window.tradeSync&&window.tradeSync(l))push(true);badge(l);
   }finally{busyR=0}
   if(repaint&&screen==='social'&&!document.querySelector('.xbt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT')&&sigP()!==lastPaint){const y=window.scrollY;paint();window.scrollTo(0,y)}
 }
@@ -2056,7 +2071,7 @@ async function priceChart(c,lb){
 const RWF=[['none','Aucun',0],['bronze','Bronze',3],['silver','Argent',10],['gold','Or',25],['neon','Néon',40],['prism','Prisme',60]];
 const RWB=[['none','Standard',0],['dusk','Crépuscule',5],['aurora','Aurore',20],['galaxy','Galaxie',45]];
 let _au=0,_at=0;
-function achU(){if(_au&&Date.now()-_at<4000)return _au;try{const own=Object.values(col),tot=own.reduce((s,c)=>s+c.count,0),by={};own.forEach(c=>by[c.tier]=(by[c.tier]||0)+c.count);achHTML(own,tot,by);_au=ACH?ACH.u:0;_at=Date.now()}catch(e){}return _au}
+let _ain=0;function achU(){if(_au&&Date.now()-_at<4000)return _au;if(_ain)return ACH?ACH.u:0;_ain=1;try{const own=Object.values(col),tot=own.reduce((s,c)=>s+c.count,0),by={};own.forEach(c=>by[c.tier]=(by[c.tier]||0)+c.count);achHTML(own,tot,by);_au=ACH?ACH.u:0;_at=Date.now()}catch(e){}finally{_ain=0}return _au}
 function rwNow(w){const L=w==='f'?RWF:RWB;let id='none';try{id=store.get(w==='f'?'rw_frame':'rw_bg','none')}catch(e){}const r=L.find(x=>x[0]===id);return r&&achU()>=r[2]?id:'none'}
 function setRw(w,id){const L=w==='f'?RWF:RWB,r=L.find(x=>x[0]===id);if(!r||achU()<r[2])return;try{store.set(w==='f'?'rw_frame':'rw_bg',id)}catch(e){}if(typeof sfx!=='undefined')sfx.tap();statsScreen()}
 function rwHTML(u){
@@ -2222,7 +2237,7 @@ function reg(pk,S0,id,god){
    (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+1}
   const bc=pk.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pk[0]);
   stats.gods=(stats.gods||0)+(god?1:0);stats.gn=(stats.gn||0)+(god&&cfg.gp<=1?1:0);
-  (stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:pv,g:god?1:0});stats.hist.length=Math.min(stats.hist.length,20);
+  (stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:pv,g:god?1:0,d:Date.now()});stats.hist.length=Math.min(stats.hist.length,500);
   if(!stats.best||(val(bc)||0)>stats.best.price)stats.best={name:bc.name,price:val(bc)||0,image:bc.image};
   persistSoon();
   return pv;
@@ -2442,7 +2457,130 @@ document.addEventListener('keydown',e=>{
 });
 
 window.mbxOpen=openDialog;
+window.mbxQuick=function(N){if(busy||TY||BATTLE||M)return;const S=sets.find(x=>x.id===setId);if(!S)return;const d=h('','');d.id='mbxd';d.innerHTML='<div class="mbxs"></div>';document.body.appendChild(d);begin(S,N,d)};
 }catch(e){console.error('mbx',e)}})();
+</script>
+
+<style>
+.trg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;max-width:560px}
+.trg .tc{position:relative;padding:0;border:3px solid transparent;border-radius:10px;background:none}
+.trg .tc img{width:100%;border-radius:6px;display:block}
+.trg .tc.on{border-color:#ffd166}
+.trg .tc small{position:absolute;left:3px;bottom:3px;background:#000a;color:#fff;border-radius:6px;padding:1px 5px;font-size:10px}
+.trg .tc i{position:absolute;right:3px;top:3px;background:#ffd166;color:#1a1200;border-radius:8px;padding:0 5px;font:800 10px/16px system-ui,sans-serif}
+.xtr h2,.xtr p,.xtr small{margin:0}
+.trd{margin:6px 16px;padding:12px;border-radius:16px;background:var(--pan2,#ffffff14);border:1px solid var(--bd,#ffffff22);display:flex;flex-direction:column;gap:8px}
+.trd .pair{display:flex;align-items:center;gap:8px}
+.trd .pair>div{flex:1;text-align:center}
+.trd .pair img{width:72px;border-radius:6px;display:block;margin:3px auto}
+.trd .acts{display:flex;gap:8px}.trd .acts button{flex:1;margin:0}
+.hsr{display:flex;align-items:center;gap:10px;width:100%;max-width:560px;padding:8px;border-radius:12px;background:#ffffff12;text-align:left;box-sizing:border-box}
+.hsr img{width:38px;border-radius:4px;flex:none}
+.hsr b{display:block;font-size:14px}.hsr small{opacity:.7}
+.xtr select{padding:10px;border-radius:12px;background:#ffffff14;color:#f3f1ff;border:1px solid #ffffff33;font-size:15px}
+.xtr select option{color:#000}
+</style>
+<script>
+(function(){try{
+const FRK='friends_v2',pid=()=>store.get('pid_v1',null),pname=()=>(store.get('me_v1',{name:''}).name||'');
+const pk=(c,spare)=>({i:c.id,s:c.setId,n:c.name,m:c.image,r:c.ri,p:c.rp?1:0,q:c.rarity,t:c.tier,v:c.price,c:spare,x:c.ni?1:0,l:c.lid});
+const un=p=>({id:p.i,setId:p.s,name:p.n,image:p.m,ri:p.r??-1,rp:!!p.p,rarity:p.q,tier:p.t,price:p.v??null,ni:!!p.x,lid:p.l});
+const thumb=c=>{try{return img(c,'low')}catch(e){return''}};
+const ov=html=>{const o=document.createElement('div');o.className='xbt xtr';o.style.color='#f3f1ff';o.style.zIndex=70;o.innerHTML=html;document.body.appendChild(o);return o};
+const addCard=c=>{const o=col[c.id];col[c.id]=o?{...o,count:o.count+1}:{...c,count:1}};
+const saveCol=()=>{store.set(KEY,col);try{_at=0}catch(e){}};
+
+/* ---------- Historique complet ---------- */
+function histOpen(){
+  const H=stats.hist||[];let sf='all',lim=40;const o=ov('');
+  const dt=d=>d?new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+  const draw=()=>{const y=o.scrollTop,L=H.filter(h=>sf==='all'||h.s===sf),ss=[...new Set(H.map(h=>h.s))];
+    const tv=L.reduce((a,h)=>a+(h.v||0),0),gods=L.filter(h=>h.g).length,last=L.slice(0,40).reverse(),mx=Math.max(1,...last.map(h=>h.v||0));
+    const bars=last.map((h,i)=>{const hh=(h.v||0)/mx*38;return `<rect x="${i*7}" y="${(40-hh).toFixed(1)}" width="5" height="${hh.toFixed(1)}" rx="1.5" fill="${h.g?'#ffd166':'#8d86d9'}"/>`}).join('');
+    o.innerHTML=`<h2>📜 Historique des tirages</h2>
+    <p class="hint">${H.length} boosters enregistrés (500 maximum)</p>
+    ${H.length?`<select id="xhs"><option value="all">Toutes les extensions</option>${ss.map(x=>`<option value="${esc(x)}" ${x===sf?'selected':''}>${esc(x)}</option>`).join('')}</select>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center"><span class="chip">📦 ${L.length}</span><span class="chip pv">💶 ${fmt(tv)}</span><span class="chip pv">📈 ${L.length?fmt(tv/L.length):'—'} / booster</span><span class="chip">✦ ${gods} God Pack${gods>1?'s':''}</span></div>
+    <svg viewBox="0 0 ${Math.max(1,last.length)*7} 40" preserveAspectRatio="none" style="width:100%;max-width:560px;height:60px">${bars}</svg><small>Valeur des ${last.length} derniers boosters (doré = God Pack)</small>
+    ${L.slice(0,lim).map(h=>{const c=col[h.i];return `<div class="hsr">${c?`<img src="${esc(thumb(c))}" alt="" onerror="this.remove()">`:''}<div style="flex:1"><b>${h.g?'✦ ':''}${esc(h.b)}</b><small>${esc(h.s)} · ${dt(h.d)}</small></div><em class="pv">${fmt(h.v||0)}</em></div>`}).join('')}
+    ${L.length>lim?'<button class="lnk" id="xhm">Voir plus</button>':''}`:'<p class="hint">Ouvre un booster pour commencer ton historique.</p>'}
+    <button class="cta" id="xhc">Fermer</button>`;
+    const s=o.querySelector('#xhs');if(s)s.onchange=()=>{sf=s.value;lim=40;draw()};
+    const m=o.querySelector('#xhm');if(m)m.onclick=()=>{lim+=60;draw()};
+    o.querySelector('#xhc').onclick=()=>o.remove();o.scrollTop=y};
+  draw()}
+const _st=window.statsScreen;window.statsScreen=function(){_st.apply(this,arguments);
+  const hh=[...$.querySelectorAll('h2')].find(e=>/^Derniers tirages/.test(e.textContent));if(!hh)return;
+  let last=hh;while(last.nextElementSibling&&last.nextElementSibling.classList.contains('row'))last=last.nextElementSibling;
+  last.insertAdjacentHTML('afterend',`<button class="lnk" id="xhf" style="width:100%">📜 Historique complet (${(stats.hist||[]).length})</button>`);
+  document.getElementById('xhf').onclick=histOpen};
+
+/* ---------- Raccourci : ouvrir plusieurs boosters depuis le résultat ---------- */
+const _rs2=window.results;window.results=function(){_rs2.apply(this,arguments);
+  if(TY||BATTLE||MTOT||!window.mbxQuick)return;
+  const b=[...$.querySelectorAll('.cta')].find(x=>/Rouvrir/.test(x.textContent));if(!b)return;
+  b.insertAdjacentHTML('beforebegin','<div id="xq" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:4px 0 8px"><small>Rouvrir d’un coup :</small>'+[3,5,10,20].map(n=>`<button class="chip" data-q="${n}">×${n}</button>`).join('')+'</div>');
+  $.querySelectorAll('#xq [data-q]').forEach(e=>e.onclick=()=>window.mbxQuick(+e.dataset.q))};
+
+/* ---------- Échanges de doublons entre amis ---------- */
+window.tradeDoc=function(){
+  const d=Object.values(col).filter(c=>c.count>1&&!c.gen).sort((a,b)=>(b.price||0)-(a.price||0)).slice(0,40).map(c=>pk(c,c.count-1));
+  return {d,o:store.get('trd_o',[]),k:store.get('trd_k',[]).slice(0,60)}};
+const incoming=l=>{const me=pid();if(!me)return[];const done=new Set(store.get('trd_k',[]).map(x=>x.id)),out=[];
+  (l||store.get(FRK,[])).forEach(f=>{if(f.tr&&f.tr.o)f.tr.o.forEach(o=>{if(o.to===me&&!done.has(o.id)&&Date.now()-o.ts<7*864e5)out.push({f,o})})});return out};
+window.tradeIn=l=>incoming(l).length;
+window.tradeSync=function(l){const mo=store.get('trd_o',[]);if(!mo.length)return false;let ch=false;const keep=[],log=store.get('trd_log',[]);
+  for(const o of mo){const f=l.find(x=>x.code===o.to),r=f&&f.tr&&f.tr.k&&f.tr.k.find(x=>x.id===o.id);
+    if(r){ch=true;
+      if(r.r===1){const c=col[o.g.i];if(c){c.count--;if(c.count<=0)delete col[o.g.i]}addCard(un(o.w));log.unshift({t:Date.now(),f:f.n,g:o.g.n,w:o.w.n});toast('🔄 '+f.n+' a accepté ! Tu reçois '+o.w.n)}
+      else toast('❌ '+f.n+' a refusé ton échange')}
+    else if(Date.now()-o.ts>7*864e5)ch=true;
+    else keep.push(o)}
+  if(ch){store.set('trd_o',keep);store.set('trd_log',log.slice(0,30));saveCol()}return ch};
+function accept(f,o){const c=col[o.w.i];if(!c||c.count<2)return toast('Tu n’as plus ce doublon');
+  c.count--;addCard(un(o.g));
+  const k=store.get('trd_k',[]);k.unshift({id:o.id,f:f.code,r:1,ts:Date.now()});store.set('trd_k',k.slice(0,60));
+  const log=store.get('trd_log',[]);log.unshift({t:Date.now(),f:f.n,g:o.w.n,w:o.g.n});store.set('trd_log',log.slice(0,30));
+  saveCol();toast('✅ Échange accepté : +'+o.g.n);window.xpush&&window.xpush(true);go('social')}
+function decline(f,o){const k=store.get('trd_k',[]);k.unshift({id:o.id,f:f.code,r:0,ts:Date.now()});store.set('trd_k',k.slice(0,60));window.xpush&&window.xpush(true);go('social')}
+const cardBox=(p,l)=>{const c=un(p);return `<div><small>${l}</small><img src="${esc(thumb(c))}" alt="" onerror="this.style.opacity=.2"><small>${esc(p.n)}</small><b class="pv">${fmt(p.v||0)}</b></div>`};
+function tradeOpen(f){
+  if(!pname())return toast('Choisis d’abord un pseudo');
+  const mine=Object.values(col).filter(c=>c.count>1&&!c.gen).sort((a,b)=>(b.price||0)-(a.price||0)),theirs=(f.tr&&f.tr.d)||[];
+  let gs=null,ws=null;const o=ov('');
+  const cell=(c,sel,sp,k)=>`<button class="tc ${sel?'on':''}" data-${k}="${esc(c.id)}"><img loading="lazy" src="${esc(thumb(c))}" alt="" onerror="this.style.opacity=.2"><small class="pv">${fmt(c.price||0)}</small>${sp>1?`<i>×${sp}</i>`:''}</button>`;
+  const draw=()=>{const y=o.scrollTop,g=gs&&col[gs],w=ws&&theirs.find(x=>x.i===ws),gv=g?(g.price||0):0,wv=w?(w.v||0):0;
+    o.innerHTML=`<h2>🔄 Échange avec ${esc(f.n)}</h2><p class="hint">Seuls les doublons peuvent être échangés (1 exemplaire contre 1 exemplaire).</p>
+    <h3 style="margin:6px 0 0">Tu donnes</h3>
+    ${mine.length?`<div class="trg">${mine.map(c=>cell(c,c.id===gs,c.count-1,'g')).join('')}</div>`:'<p class="hint">Tu n’as pas encore de doublons.</p>'}
+    <h3 style="margin:10px 0 0">Tu veux</h3>
+    ${f.tr?(theirs.length?`<div class="trg">${theirs.map(p=>cell(un(p),p.i===ws,p.c,'w')).join('')}</div>`:`<p class="hint">${esc(f.n)} n’a pas de doublons à échanger pour l’instant.</p>`):`<p class="hint">${esc(f.n)} doit mettre le jeu à jour et se reconnecter pour échanger.</p>`}
+    ${g&&w?`<div class="pv" style="font-size:14px">Tu donnes ${fmt(gv)} · tu reçois ${fmt(wv)}${wv>gv*1.5&&wv-gv>1?'<br><small>⚠️ Échange plutôt déséquilibré en ta défaveur</small>':''}</div>`:''}
+    <button class="cta" id="xtp" ${g&&w?'':'disabled'} style="width:100%;max-width:560px">Proposer l’échange</button><button class="lnk" id="xtc">Fermer</button>`;
+    o.querySelectorAll('[data-g]').forEach(e=>e.onclick=()=>{gs=gs===e.dataset.g?null:e.dataset.g;draw()});
+    o.querySelectorAll('[data-w]').forEach(e=>e.onclick=()=>{ws=ws===e.dataset.w?null:e.dataset.w;draw()});
+    o.querySelector('#xtc').onclick=()=>o.remove();
+    o.querySelector('#xtp').onclick=async()=>{if(!(gs&&ws))return;const c=col[gs],wp=theirs.find(x=>x.i===ws);if(!c||c.count<2||!wp)return;
+      const off={id:Math.random().toString(36).slice(2,10),to:f.code,g:pk(c,1),w:wp,ts:Date.now()};
+      const mo=store.get('trd_o',[]).filter(x=>x.to!==f.code);mo.unshift(off);store.set('trd_o',mo.slice(0,5));
+      o.remove();toast('Proposition envoyée à '+f.n);try{window.xpush&&await window.xpush(true)}catch(e){}go('social')};
+    o.scrollTop=y};
+  draw()}
+window.tradeUI=function(fr){try{
+  const pfs=document.querySelectorAll('.xfl .pf');
+  fr.forEach((f,i)=>{const p=pfs[i];if(!p||!f.code)return;const n=incoming([f]).length,b=document.createElement('button');b.className='cta';b.textContent='🔄 Échanger'+(n?` · ${n} proposition${n>1?'s':''}`:'');b.onclick=()=>tradeOpen(f);
+    const del=p.querySelector('[data-del]');del?del.before(b):p.appendChild(b)});
+  const h=[...$.querySelectorAll('h2')].find(e=>/^Mes amis/.test(e.textContent));if(!h||!fr.some(f=>f.code))return;
+  const inc=incoming(fr),out=store.get('trd_o',[]),log=store.get('trd_log',[]);
+  h.insertAdjacentHTML('beforebegin',`<h2>🔄 Échanges</h2>
+  ${inc.length?inc.map(({f,o},i)=>{const ok=col[o.w.i]&&col[o.w.i].count>1;return `<div class="trd"><b>${esc(f.n)} te propose un échange</b><div class="pair">${cardBox(o.g,'Tu reçois')}<span>⇄</span>${cardBox(o.w,'Tu donnes')}</div>${ok?'':'<small>Tu n’as plus ce doublon.</small>'}<div class="acts"><button class="cta" data-ta="${i}" ${ok?'':'disabled'}>Accepter</button><button class="lnk" data-td="${i}">Refuser</button></div></div>`}).join(''):'<p class="hint">Aucune proposition reçue. Appuie sur « Échanger » sous un ami pour en envoyer une.</p>'}
+  ${out.map((o,i)=>{const f=fr.find(x=>x.code===o.to);return `<div class="trd"><small>En attente de ${esc(f?f.n:'ton ami')}…</small><div class="pair">${cardBox(o.g,'Tu donnes')}<span>⇄</span>${cardBox(o.w,'Tu reçois')}</div><button class="lnk" data-tc="${i}">Annuler</button></div>`}).join('')}
+  ${log.length?`<p class="hint">Derniers échanges : ${log.slice(0,3).map(x=>`${esc(x.g)} ⇄ ${esc(x.w)} (${esc(x.f)})`).join(' · ')}</p>`:''}`);
+  $.querySelectorAll('[data-ta]').forEach(b=>b.onclick=()=>{const x=inc[+b.dataset.ta];accept(x.f,x.o)});
+  $.querySelectorAll('[data-td]').forEach(b=>b.onclick=()=>{const x=inc[+b.dataset.td];decline(x.f,x.o)});
+  $.querySelectorAll('[data-tc]').forEach(b=>b.onclick=()=>{const l=store.get('trd_o',[]);l.splice(+b.dataset.tc,1);store.set('trd_o',l);window.xpush&&window.xpush(true);go('social')});
+}catch(e){console.error('trade',e)}};
+}catch(e){console.error('features',e)}})();
 </script>
 </body>
 </html>
