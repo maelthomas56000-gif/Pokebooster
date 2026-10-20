@@ -1976,7 +1976,7 @@ function dr(p,g){const f=1+boost*.6;p.x+=p.vx*f;p.y+=p.vy*f;if(p.life!=null){if(
  if(p.life!=null)return 1;
  if(p.y>H+40||p.y<-40||p.x<-60||p.x>W+60){if(k=='ff'||k=='st'){p.x=R(0,W);p.y=R(0,H)}else Object.assign(p,np(k,false))}return 1}
 function mkps(){const u=U[uni],m={Calme:.5,Normal:1,Intense:1.7}[gD()]||1;ps=[];u.k.forEach((k,i)=>{const n=Math.round(u.n[i]*m*(ios?.5:1));for(let j=0;j<n;j++)ps.push(np(k,true))})}
-function frame(t){raf=requestAnimationFrame(frame);if(document.hidden||t-last<(ios?50:33))return;last=t;tt+=.033;
+function frame(t){raf=requestAnimationFrame(frame);if(document.hidden||(typeof screen!=='undefined'&&(screen==='focus'||screen==='reveal'||screen==='results'))||t-last<(ios?50:33))return;last=t;tt+=.033;
  cx.clearRect(0,0,W,H);if(bgc)cx.drawImage(bgc,0,0);const u=U[uni];if(DY[uni])DY[uni](cx);
  if(uni=='Cosmos'&&Math.random()<.008)ps.push(np('sh'));
  ps=ps.filter(p=>dr(p,cx));boost*=.985;if(boost<.02)boost=0}
