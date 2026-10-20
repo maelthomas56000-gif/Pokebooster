@@ -1520,7 +1520,7 @@ window.zoomAny=async id=>{const sid=viewId,c=cardsOf(B[sid],sid).find(x=>x.id===
 let MULT=0,MSUM=0,MTOT=0,MLAST=null;
 const WK='wal_v1',wal=()=>store.get(WK,0),setWal=v=>{store.set(WK,Math.round(v*100)/100);updWal()};
 const _fs=window.focusScreen;window.focusScreen=function(){_fs();if(BATTLE||(TY&&!MULT))return;const w=$.querySelector('.swh');if(!w)return;
-  w.insertAdjacentHTML('beforebegin',MULT>0?`<div class="hint">${TY&&tyc.etb>0?'📦 ETB':'Série en cours'} : ${MTOT-MULT+1}/${MTOT}</div>`:'<div class="chips" id="xm" style="justify-content:center">'+[1,5,10].map(n=>`<button class="chip ${n===1?'on':''}" data-m="${n}">×${n}</button>`).join('')+'</div>');
+  w.insertAdjacentHTML('beforebegin',MULT>0?`<div class="hint">${TY&&tyc.etb>0?'📦 ETB':'Série en cours'} : ${MTOT-MULT+1}/${MTOT}</div>`:'');
   document.querySelectorAll('#xm [data-m]').forEach(b=>b.onclick=()=>{const n=+b.dataset.m;MULT=n>1?n:0;MTOT=MULT;MSUM=0;MLAST=null;document.querySelectorAll('#xm .chip').forEach(x=>x.classList.toggle('on',x===b))})};
 const _rs=window.results;window.results=function(){_rs();if(BATTLE||!MTOT)return;
   if(MLAST!==pack){MLAST=pack;MSUM+=pack.reduce((t,c)=>t+(val(c)||0),0);MULT--}
@@ -2798,16 +2798,6 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Escape')summary();
 });
 
-/* ---------- 7. bouton sur l'écran du booster ---------- */
-const f0=window.focusScreen;
-if(typeof f0==='function')window.focusScreen=function(){
-  const r=f0.apply(this,arguments);
-  try{
-    if(!TY&&!BATTLE){const o=document.getElementById('openb');
-      if(o&&!document.getElementById('mbxo')){const b=document.createElement('button');b.id='mbxo';b.className='lnk mbx-open';b.textContent='🎴 Ouvrir plusieurs boosters';b.onclick=openDialog;o.insertAdjacentElement('afterend',b)}}
-  }catch(e){}
-  return r;
-};
 window.mbxOpen=openDialog;
 }catch(e){console.error('mbx',e)}})();
 </script>
