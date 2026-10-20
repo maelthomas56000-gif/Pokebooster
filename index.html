@@ -2451,11 +2451,12 @@ html body [data-bg=galaxy]{background:radial-gradient(1.5px 1.5px at 18% 28%,#ff
 <style id="mbx-css">
 /* ====== Ouverture en lot (style appli officielle) ====== */
 body.mbx-on{overflow:hidden}
+body.mbx-on>*:not(.mbx):not(.lb):not(#fx):not(.toast):not(.mbx-cb):not(.mbx-cnt):not(script):not(style){display:none!important}
 body.mbx-on .lb,body.mbx-on #fx{z-index:9100}
 body.mbx-on .toast{z-index:9200}
 .mbx-open{display:block;margin:0 auto 6px;padding:12px 22px;border:1.5px solid currentColor;border-radius:999px;font-weight:700;font-size:14px;opacity:.9;background:transparent}
 /* --- fenêtre de confirmation --- */
-#mbxd{position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:rgba(196,208,232,.42);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);animation:mbxFade .25s both}
+#mbxd{position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:rgba(190,202,228,.78);animation:mbxFade .25s both}
 .mbxs{width:100%;max-width:520px;background:#fff;border-radius:24px 24px 0 0;padding:26px 20px 20px;color:#56627f;text-align:center;box-shadow:0 -10px 40px #3a4a7a30;animation:mbxUp .4s cubic-bezier(.2,.9,.3,1) both}
 .mbxt{font-size:15px;line-height:1.45;font-weight:600}
 .mbxt small{display:block;font-weight:500;opacity:.7;margin-top:2px}
@@ -2481,13 +2482,11 @@ html[data-theme=dark] .mbxx{background:#2a2639;color:#dcd8ef}html[data-theme=dar
 .mbx-bg{position:absolute;inset:0;background:linear-gradient(180deg,#c6d5f6 0%,#d8d3f6 52%,#bfd2f4 100%);transition:opacity .45s}
 html[data-theme=dark] .mbx-bg{background:linear-gradient(180deg,#171c3d,#2a2255 55%,#161b3a)}
 .mbx-bg[data-bg]{background:none}
-.mbx-sp{position:absolute;inset:0;pointer-events:none;opacity:.75;background:radial-gradient(circle,#fff 0 1.3px,transparent 2.2px) 0 0/90px 90px,radial-gradient(circle,#ffffffcc 0 1px,transparent 1.9px) 37px 41px/133px 133px;animation:mbxDrift 16s linear infinite}
+.mbx-sp{position:absolute;inset:0;pointer-events:none;opacity:.75;background:radial-gradient(circle,#fff 0 1.3px,transparent 2.2px) 0 0/90px 90px,radial-gradient(circle,#ffffffcc 0 1px,transparent 1.9px) 37px 41px/133px 133px}
 @keyframes mbxDrift{to{background-position:0 90px,37px 174px}}
 .mbx-glow{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse 80% 55% at 50% 52%,var(--gc,#fff8) 0,transparent 72%),linear-gradient(90deg,var(--gc,transparent),transparent 28%,transparent 72%,var(--gc,transparent))}
 .mbx-glow.on{animation:mbxGlow 1s ease-out both}
 @keyframes mbxGlow{from{opacity:0}30%{opacity:1}to{opacity:.8}}
-.mbx-rays{position:absolute;left:50%;top:46%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;pointer-events:none;opacity:0;transition:opacity .5s;background:repeating-conic-gradient(rgba(255,255,255,.6) 0 5deg,transparent 5deg 15deg);-webkit-mask-image:radial-gradient(circle,#000 0,transparent 42%);mask-image:radial-gradient(circle,#000 0,transparent 42%);animation:mbxSpin 50s linear infinite}
-.mbx[data-r="3"] .mbx-rays,.mbx[data-r="4"] .mbx-rays,.mbx[data-r="5"] .mbx-rays{opacity:.8}
 @keyframes mbxSpin{to{transform:rotate(360deg)}}
 .mbx-top{position:absolute;top:max(14px,env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding-right:14px;z-index:5;pointer-events:none}
 .mbx-pill{background:#8892a8d9;color:#fff;font-weight:700;font-size:13px;padding:9px 18px 9px 14px;border-radius:0 18px 18px 0;min-height:18px;transition:transform .3s}
@@ -2495,7 +2494,9 @@ html[data-theme=dark] .mbx-bg{background:linear-gradient(180deg,#171c3d,#2a2255 
 .mbx-skip{pointer-events:auto;border:0;border-radius:999px;padding:9px 14px;background:#ffffffa8;color:#51607f;font-weight:700;font-size:13px}
 .mbx-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-bottom:64px}
 .mbx-card{display:flex;flex-direction:column;align-items:center;gap:20px}
-.mbx .pers{position:relative;perspective:900px}
+.mbx .pers{position:relative;perspective:900px;will-change:transform}
+.mbx .pers::after{display:none}
+.mbx .zc{box-shadow:0 10px 22px #2a355055,inset 0 0 0 1px #fff3!important}
 .mbx .tilt{width:min(74vw,330px,calc((100dvh - 270px)*.716))}
 .mbx-new{position:absolute;left:-8px;top:-15px;z-index:6;background:linear-gradient(#ff6a7a,#e63950);color:#fff;font-weight:800;font-size:12px;letter-spacing:.5px;padding:6px 13px;border-radius:999px;box-shadow:0 4px 12px #e6395066;animation:mbxPop .45s .3s cubic-bezier(.3,1.7,.5,1) both}
 @keyframes mbxPop{from{transform:scale(0);opacity:0}}
@@ -2510,37 +2511,34 @@ html[data-theme=dark] .mbx-bg{background:linear-gradient(180deg,#171c3d,#2a2255 
 .mbx-ff.on{background:#3cc0ee;color:#fff}
 .mbx-hint{position:absolute;left:0;right:0;bottom:calc(30px + env(safe-area-inset-bottom));text-align:center;font-weight:700;font-size:13px;opacity:.6;pointer-events:none}
 .mbx-fl{position:absolute;inset:0;z-index:12;pointer-events:none;background:radial-gradient(circle at 50% 50%,#fff 0 45%,#fffffff0 75%);opacity:0}
-/* --- intro : pile de boosters en 3D --- */
+/* --- intro : pile de boosters (version légère, sans 3D) --- */
 .mbi{position:absolute;inset:0}
-.mbi-w{position:absolute;left:50%;top:50%;width:0;height:0;perspective:1200px;transform:scale(var(--ms,1))}
-.mbi-s{position:absolute;left:0;top:0;transform-style:preserve-3d;animation:mbiTurn 2.6s cubic-bezier(.3,.6,.3,1) both}
-@keyframes mbiTurn{from{transform:rotateX(14deg) rotateY(-42deg)}to{transform:rotateX(6deg) rotateY(-16deg)}}
-.mbi-p{position:absolute;left:-95px;top:-160px;width:190px;height:320px;transform-style:preserve-3d;transform:translate3d(calc(var(--i)*26px),calc(var(--i)*-10px),calc(var(--i)*-60px));animation:mbiRise .95s calc(var(--i)*75ms) cubic-bezier(.2,.9,.25,1) both}
-@keyframes mbiRise{from{transform:translate3d(calc(var(--i)*26px),110vh,calc(var(--i)*-60px)) rotateZ(8deg)}}
-.mbx .mbi-p .pk{transform:none!important;opacity:1!important;filter:none!important;animation:none!important;touch-action:none}
-.mbi-p.tear .pk{clip-path:inset(13% 0 0 0)}
-.mbi-strip{position:absolute;inset:0;pointer-events:none}
-.mbi-strip .pk{clip-path:inset(0 0 87% 0)}
-.mbi-gl{position:absolute;left:50%;top:50%;width:120vmax;height:120vmax;margin:-60vmax 0 0 -60vmax;pointer-events:none;opacity:0;background:repeating-conic-gradient(rgba(255,255,255,.85) 0 4deg,transparent 4deg 12deg);-webkit-mask-image:radial-gradient(circle,#000 0,transparent 38%);mask-image:radial-gradient(circle,#000 0,transparent 38%);animation:mbxSpin 30s linear infinite}
-/* mode Fluide / iOS : pas d'animation continue sur les grands calques */
-html.lite .mbx-rays,html.ios .mbx-rays,html.lite .mbi-gl,html.ios .mbi-gl,html.lite .mbx-sp,html.ios .mbx-sp{animation:none}
-html.lite .mbx-rays,html.ios .mbx-rays{width:110vmax;height:110vmax;margin:-55vmax 0 0 -55vmax}
+.mbi::before{content:"";position:absolute;left:50%;top:50%;width:150vmin;height:150vmin;margin:-75vmin 0 0 -75vmin;background:radial-gradient(circle,#ffffffe6 0,#ffffff00 66%)}
+.mbi-w{position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(var(--ms,1))}
+.mbi-s{position:absolute;left:0;top:0}
+.mbi-p{position:absolute;left:-95px;top:-160px;width:190px;height:320px;border-radius:10px;overflow:hidden;box-shadow:0 12px 24px #2a355050;will-change:transform;z-index:calc(20 - var(--i));transform:translate(calc(var(--i)*22px),calc(var(--i)*-7px)) scale(calc(1 - var(--i)*.045));animation:mbiRise .8s calc(var(--i)*70ms) cubic-bezier(.2,.9,.25,1) both}
+@keyframes mbiRise{from{transform:translate(calc(var(--i)*22px),110vh) rotate(8deg)}}
+.mbi-p img{width:100%;height:100%;object-fit:cover;display:block}
+.mbi-p .lpb{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:14px;text-align:center;color:#fff;font-weight:800;font-size:17px;text-shadow:0 2px 6px #0006;background:linear-gradient(168deg,hsl(var(--ph) 85% 68%),hsl(var(--ph) 90% 47%) 45%,hsl(var(--ph) 88% 24%))}
+.mbi-p .lpl{width:auto;height:auto;max-width:140px;max-height:70px;object-fit:contain}
+.mbi-p.tear{clip-path:inset(13% 0 0 0)}
+.mbi-p.mbi-strip{clip-path:inset(0 0 87% 0);animation:none;z-index:30}
 /* --- résumé --- */
 .mbx-sum{position:absolute;inset:0;display:flex;flex-direction:column;background:linear-gradient(#eef2fb,#e2eaf7);color:#4a5778;transition:opacity .45s;animation:mbxFade .4s both}
 html[data-theme=dark] .mbx-sum{background:linear-gradient(#181629,#1e1b30);color:#d6d2ec}
 .mbx-sh{padding:max(16px,env(safe-area-inset-top)) 18px 6px}
 .mbx-sh h2{margin:0 0 8px;font-size:20px;letter-spacing:.3px;opacity:.85}
 .mbx-chips{display:flex;gap:8px;flex-wrap:wrap}
-.mbx-chips span{padding:7px 12px;border-radius:999px;background:#fff;font-weight:700;font-size:12.5px;box-shadow:0 2px 8px #3a4a7a18}
+.mbx-chips span{padding:7px 12px;border-radius:999px;background:#fff;font-weight:700;font-size:12.5px}
 html[data-theme=dark] .mbx-chips span{background:#2a2639}
 .mbx-best{margin-top:8px;font-size:12.5px;opacity:.75}
 .mbx-list{flex:1;overflow:auto;padding:4px 14px 120px;-webkit-overflow-scrolling:touch}
-.mbx-list section{margin-top:14px}
+.mbx-list section{margin-top:14px;content-visibility:auto;contain-intrinsic-size:auto 300px}
 .mbx-list h3{margin:0 0 8px;text-align:center;font-size:12.5px;font-weight:700;opacity:.65;letter-spacing:.3px}
 .mbx-g{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
-.mbx-c{position:relative;border:0;padding:0;background:none;display:block;animation:mbxPop .4s calc(var(--k)*28ms) both}
-.mbx-c img{width:100%;aspect-ratio:245/342;display:block;border-radius:4.5%/3.2%;box-shadow:0 3px 9px #3a4a7a40;background:#cfd6ea}
-.mbx-c.r3 img,.mbx-c.r4 img,.mbx-c.r5 img{box-shadow:0 0 0 1.5px var(--tc),0 0 12px var(--tc)}
+.mbx-c{position:relative;border:0;padding:0;background:none;display:block}
+.mbx-c img{width:100%;aspect-ratio:245/342;display:block;border-radius:4.5%/3.2%;box-shadow:0 1px 4px #3a4a7a40;background:#cfd6ea}
+.mbx-c.r3 img,.mbx-c.r4 img,.mbx-c.r5 img{box-shadow:0 0 0 2px var(--tc)}
 .mbx-c i{position:absolute;left:3px;bottom:3px;min-width:15px;padding:1px 4px;border-radius:5px;background:#fffd;color:#3b4766;font:800 10px/14px system-ui;text-align:center;font-style:normal}
 .mbx-c em{position:absolute;left:-2px;top:-4px;padding:2px 5px;border-radius:999px;background:#e63950;color:#fff;font:800 7.5px/1.2 system-ui;font-style:normal;letter-spacing:.3px}
 .mbx-foot{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;padding:34px 24px calc(18px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#e2eaf7 55%);pointer-events:none}
@@ -2567,6 +2565,8 @@ const num=n=>n.toLocaleString('fr-FR');
 const totalCards=()=>Object.values(col).reduce((s,c)=>s+(c.count||0),0);
 const GLOW=['#ffffffb0','#8fd0ffb0','#ffd166c0','#ff8fd8c8','#c084ffd0','#ffe14de0'];
 let M=null,FF=false;
+const pauseGame=on=>{try{if(on)Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});else delete document.hidden}catch(e){}};
+const litePack=(S,i)=>`<div class="mbi-p" style="--i:${i};--ph:${hue(S.id)}">${BOOST[S.id]?`<img src="${esc(BOOST[S.id])}" alt="" decoding="async">`:`<div class="lpb">${S.logo?`<img class="lpl" data-h src="${esc(S.logo)}.png" alt="">`:''}<span>${esc(S.name)}</span></div>`}</div>`;
 
 /* ---------- enregistrement d'un booster (même logique que l'ouverture classique) ---------- */
 function reg(pk,S0,id,god){
@@ -2631,9 +2631,9 @@ async function begin(S,N,d){
 
 /* ---------- 2. scène ---------- */
 function scene(d){
-  document.body.classList.add('mbx-on');
+  document.body.classList.add('mbx-on');pauseGame(true);
   const bgm=typeof rwNow==='function'?rwNow('b'):'none';
-  const ov=h('mbx',`<div class="mbx-bg" ${bgm!=='none'?`data-bg="${bgm}"`:''}></div><div class="mbx-sp"></div><div class="mbx-rays"></div><div class="mbx-glow"></div>
+  const ov=h('mbx',`<div class="mbx-bg" ${bgm!=='none'?`data-bg="${bgm}"`:''}></div><div class="mbx-sp"></div><div class="mbx-glow"></div>
     <div class="mbx-top" style="display:none"><span class="mbx-pill" id="mbp"></span><button class="mbx-skip" id="mbk">Résumé »</button></div>
     <div class="mbx-stage" id="mbg"></div>
     <button class="mbx-ff" id="mbf" style="display:none">⏩<small>Maintenir</small></button>
@@ -2646,43 +2646,37 @@ function scene(d){
 
 async function intro(){
   const {ov,S,lot}=M,st=ov.querySelector('#mbg');
-  const k=Math.min(lot.length,8),ms=Math.max(.55,Math.min(1.25,(innerWidth-50)/(230+k*26),(innerHeight-260)/330));
-  st.innerHTML=`<div class="mbi"><div class="mbi-gl" id="mbgl"></div><div class="mbi-w" style="--ms:${ms.toFixed(2)};margin-left:${(-(k-1)*13*ms-8).toFixed(0)}px"><div class="mbi-s">${Array.from({length:k},(_,i)=>`<div class="mbi-p" style="--i:${i}">${packHTML(S,'on')}</div>`).join('')}</div></div></div>`;
-  st.querySelectorAll('.pk .art').forEach(a=>{if(!BOOST[S.id])loadArt(a,S.id)});
+  const k=Math.min(lot.length,6),ms=Math.max(.6,Math.min(1.3,(innerWidth-60)/(190+k*22),(innerHeight-260)/330));
+  st.innerHTML=`<div class="mbi"><div class="mbi-w" style="--ms:${ms.toFixed(2)};margin-left:${(-(k-1)*11*ms).toFixed(0)}px"><div class="mbi-s">${Array.from({length:k},(_,i)=>litePack(S,i)).join('')}</div></div></div>`;
   M.phase='intro';
   try{[392,523,659,784].forEach((f,i)=>tone(f,i*.12,.5,'sine',.1))}catch(e){}
-  const wait=new Promise(r=>{M.introEnd=r;setTimeout(r,2350)});
-  setTimeout(()=>{if(M&&M.phase==='intro'){const gl=st.querySelector('#mbgl');gl&&gl.animate([{opacity:0},{opacity:.9}],{duration:600,fill:'forwards'})}},900);
-  await wait;if(!M||M.phase!=='intro')return;M.introEnd=null;M.phase='cards';
-  // déchirure du booster de devant, puis éclair
-  const front=st.querySelector('.mbi-p');
-  if(front){
-    const strip=h('mbi-strip',front.querySelector('.pk').outerHTML);front.appendChild(strip);front.classList.add('tear');
-    strip.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:'translate(150px,-250px) rotate(38deg)',opacity:0}],{duration:520,easing:'ease-out',fill:'forwards'});
-  }
-  sfx.tear();fx('#ffd166',30,false);
+  await new Promise(r=>{M.introEnd=r;setTimeout(r,1900)});
+  if(!M||M.phase!=='intro')return;M.introEnd=null;M.phase='cards';
+  tearAnim(st,300,[150,-250,38]);
+  sfx.tear();fx('#ffd166',16,false);
   await sleep(380);
-  const fl=ov.querySelector('#mbl');
-  fl.animate([{opacity:0},{opacity:1,offset:.4},{opacity:0}],{duration:760});
-  await sleep(300);
+  ov.querySelector('#mbl').animate([{opacity:0},{opacity:1,offset:.4},{opacity:0}],{duration:700});
+  await sleep(280);
   ov.querySelector('.mbx-top').style.display='';ov.querySelector('#mbf').style.display='';
   showCard(true);
+}
+function tearAnim(st,dur,v){
+  const front=st.querySelector('.mbi-p');if(!front)return;
+  const strip=front.cloneNode(true);strip.classList.add('mbi-strip');front.parentNode.appendChild(strip);front.classList.add('tear');
+  strip.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:`translate(${v[0]}px,${v[1]}px) rotate(${v[2]}deg)`,opacity:0}],{duration:dur+200,easing:'ease-out',fill:'forwards'});
 }
 
 /* petit booster entre deux ouvertures */
 async function miniPack(){
   const {ov,S}=M,st=ov.querySelector('#mbg');
-  st.innerHTML=`<div class="mbi"><div class="mbi-w" style="--ms:1.1"><div class="mbi-s" style="animation:none;transform:rotateY(-8deg)"><div class="mbi-p" style="--i:0;animation:none">${packHTML(S,'on')}</div></div></div></div>`;
-  st.querySelectorAll('.pk .art').forEach(a=>{if(!BOOST[S.id])loadArt(a,S.id)});
+  st.innerHTML=`<div class="mbi"><div class="mbi-w" style="--ms:1.1"><div class="mbi-s">${litePack(S,0).replace('style="','style="animation:none;')}</div></div></div>`;
   const p=st.querySelector('.mbi-p');
-  p.animate([{transform:'translate3d(0,40px,0) scale(.6)',opacity:0},{transform:'translate3d(0,0,0) scale(1)',opacity:1}],{duration:260,easing:'cubic-bezier(.2,1.3,.4,1)',fill:'both'});
-  await sleep(300);
-  const strip=h('mbi-strip',p.querySelector('.pk').outerHTML);p.appendChild(strip);p.classList.add('tear');
-  strip.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:'translate(130px,-230px) rotate(34deg)',opacity:0}],{duration:380,easing:'ease-out',fill:'forwards'});
-  sfx.tear();
-  await sleep(220);
-  ov.querySelector('#mbl').animate([{opacity:0},{opacity:.95,offset:.4},{opacity:0}],{duration:480});
-  await sleep(200);
+  p.animate([{transform:'translate(0,40px) scale(.6)',opacity:0},{transform:'translate(0,0) scale(1)',opacity:1}],{duration:240,easing:'cubic-bezier(.2,1.3,.4,1)'});
+  await sleep(280);
+  tearAnim(st,260,[130,-230,34]);sfx.tear();
+  await sleep(240);
+  ov.querySelector('#mbl').animate([{opacity:0},{opacity:.95,offset:.4},{opacity:0}],{duration:420});
+  await sleep(180);
 }
 
 /* ---------- 3. cartes une par une ---------- */
@@ -2702,11 +2696,11 @@ function showCard(first){
   const pill=ov.querySelector('#mbp');pill.textContent=`Booster n° ${M.bi+1}${lot.length>1?' / '+lot.length:''}${pk.god?'  ✦ GOD PACK ✦':''}`;pill.classList.toggle('god',!!pk.god);
   const st=ov.querySelector('#mbg');
   st.innerHTML=`<div class="mbx-card"><div class="pers">${c.isNew?'<span class="mbx-new">NOUVEAU</span>':''}<div class="tilt zc ${r>=4?'fa':''}" data-fr="${fr}" style="--gi:${gi};--tc:${col_}"><img src="${img(c,'high')}" alt="${esc(c.name)}">${foil?'<div class="hf"></div><div class="gt"></div>':''}<div class="sh"></div><div class="rim"></div></div></div><div class="mbx-dia">${diaHTML(c)}</div></div>`;
-  const pers=st.querySelector('.pers');tlReg(st.querySelector('.tilt'));M.cur=pers;
+  const pers=st.querySelector('.pers');M.cur=pers;
   pers.animate([{transform:'perspective(900px) rotateY(-82deg) scale(.6) translateY(50px)',opacity:0},{transform:'perspective(900px) rotateY(7deg) scale(1.04) translateY(-6px)',opacity:1,offset:.7},{transform:'perspective(900px) rotateY(0) scale(1)',opacity:1}],{duration:FF?170:520,easing:'cubic-bezier(.2,.9,.3,1)'});
-  if(pk.god&&M.ci===0&&!FF){sfx.god();fx('#ffe14d',60,true)}
+  if(pk.god&&M.ci===0&&!FF){sfx.god();fx('#ffe14d',30,true)}
   if(!FF||r>=3)sfx.card(r,c.rev,last);
-  if((r>=2||last||c.rev)&&!FF){fx(col_,r>=4?40:r>=3?26:14,r>=4);if(r>=3&&navigator.vibrate)navigator.vibrate(r>=4?[60,40,120]:40)}
+  if((r>=2||last||c.rev)&&!FF){fx(col_,r>=4?22:r>=3?14:8,r>=4);if(r>=3&&navigator.vibrate)navigator.vibrate(r>=4?[60,40,120]:40)}
   // préchargement des cartes suivantes
   for(let j=1;j<=3;j++){const n=pk.cards[M.ci+j]||(lot[M.bi+1]&&lot[M.bi+1].cards[M.ci+j-pk.cards.length]);if(n){try{new Image().src=img(n,'high')}catch(e){}}}
   const nb=lot[M.bi+1];if(nb&&M.ci===pk.cards.length-1)nb.cards.slice(0,2).forEach(n=>{try{new Image().src=img(n,'high')}catch(e){}});
@@ -2746,12 +2740,12 @@ async function summary(){
   FF=false;M.phase='sum';
   const {ov,lot}=M,all=lot.flatMap(p=>p.cards),nw=all.filter(c=>c.isNew).length,tv=lot.reduce((s,p)=>s+p.val,0);
   const best=all.reduce((a,c)=>(rankOf(c)*1e6+(val(c)||0))>(rankOf(a)*1e6+(val(a)||0))?c:a,all[0]);
-  ov.querySelectorAll('.mbx-top,.mbx-ff,.mbx-hint,.mbx-rays,.mbx-glow').forEach(e=>e.style.display='none');
+  ov.querySelectorAll('.mbx-top,.mbx-ff,.mbx-hint,.mbx-glow,.mbx-sp').forEach(e=>e.style.display='none');
   const st=ov.querySelector('#mbg');st.innerHTML='';
   let k=0;
   const sum=h('mbx-sum',`<div class="mbx-sh"><h2>Résumé</h2><div class="mbx-chips"><span>📦 ${lot.length} booster${lot.length>1?'s':''}</span><span>🎴 ${all.length} cartes</span><span>✨ ${nw} nouvelle${nw>1?'s':''}</span><span class="pv">💶 ${fmt(tv)}</span></div>
   <div class="mbx-best">Plus belle carte : <b>${esc(best.name)}</b> · ${esc(label(best))}</div></div>
-  <div class="mbx-list">${lot.map((p,i)=>`<section><h3>Booster n° ${i+1}${p.god?' ✦ GOD PACK ✦':''}</h3><div class="mbx-g">${p.cards.map((c,j)=>`<button class="mbx-c r${RANK[c.tier]||0}" data-b="${i}" data-c="${j}" style="--tc:${tc(c)};--k:${Math.min(k++,40)}"><img loading="lazy" src="${img(c,'low')}" alt="${esc(c.name)}">${c.isNew?'<em>NOUVEAU</em>':''}<i>${(col[c.id]&&col[c.id].count)||1}</i></button>`).join('')}</div></section>`).join('')}</div>
+  <div class="mbx-list">${lot.map((p,i)=>`<section><h3>Booster n° ${i+1}${p.god?' ✦ GOD PACK ✦':''}</h3><div class="mbx-g">${p.cards.map((c,j)=>`<button class="mbx-c r${RANK[c.tier]||0}" data-b="${i}" data-c="${j}" style="--tc:${tc(c)};--k:0"><img loading="lazy" src="${img(c,'low')}" alt="${esc(c.name)}">${c.isNew?'<em>NOUVEAU</em>':''}<i>${(col[c.id]&&col[c.id].count)||1}</i></button>`).join('')}</div></section>`).join('')}</div>
   <div class="mbx-foot"><button class="mbx-next">Suivant</button></div>`);
   ov.appendChild(sum);sfx.done(rankOf(best));
   sum.querySelectorAll('.mbx-c').forEach(b=>b.onclick=()=>{const c=lot[+b.dataset.b].cards[+b.dataset.c];zoom(c)});
@@ -2762,7 +2756,7 @@ async function summary(){
 async function finish(){
   if(!M||M.phase==='fin')return;M.phase='fin';
   const {ov,before}=M,after=totalCards(),nw=M.lot.flatMap(p=>p.cards).filter(c=>c.isNew).length;
-  busy=false;go('collection');
+  busy=false;document.body.classList.remove('mbx-on');pauseGame(false);go('collection');
   ov.classList.add('fin');
   await sleep(480);
   const nb=document.querySelector('#nav [data-t="col"]'),r=nb?nb.getBoundingClientRect():{left:innerWidth*.3,top:innerHeight-60,width:40,height:40};
@@ -2777,7 +2771,7 @@ async function finish(){
   await sleep(K*120+820+1500);
   out.textContent=num(after);
   pill.animate([{opacity:1},{opacity:0}],{duration:350,fill:'forwards'});
-  await sleep(380);pill.remove();ov.remove();document.body.classList.remove('mbx-on');
+  await sleep(380);pill.remove();ov.remove();
   try{_at=0;setTimeout(rwCheck,900)}catch(e){}
   FF=false;M=null;
 }
