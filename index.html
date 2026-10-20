@@ -1468,7 +1468,7 @@ const mine=loc=>{const own=Object.values(col),top=own.reduce((a,c)=>(c.price||0)
   const m={n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,ver:4,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:top?{n:top.name,p:top.price||0,u:cu(top,'high'),i:real(top.image)?top.image:null}:null,bt:store.get(BT,[]),a:ph?'':a,f:favs().slice(0,4).map(id=>col[id]).map(c=>({n:c.name,u:cu(c,'low'),i:real(c.image)?c.image:null})).filter(x=>x.u),d:Date.now()};
   return loc?{...m,L:top?img(top):null,ph}:m};
 let lastSig='';window.xpush=f=>push(f);
-const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30)+(window.tradeDoc?JSON.stringify(window.tradeDoc()):'');if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>1800&&(m.bt.length||m.f.length)){if(m.bt.length)m.bt.pop();else m.f.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};const td=window.tradeDoc?window.tradeDoc():null;if(td)fields.t={stringValue:JSON.stringify(td)};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});return r.ok}catch(e){lastSig='';return false}};
+const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30)+(window.tradeDoc?JSON.stringify(window.tradeDoc()):'');if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>9000&&(m.f.length||m.bt.length>1)){if(m.f.length)m.f.pop();else m.bt.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};const td=window.tradeDoc?window.tradeDoc():null;if(td)fields.t={stringValue:JSON.stringify(td)};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});return r.ok}catch(e){lastSig='';return false}};
 const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json(),o=JSON.parse(d.fields.j.stringValue);if(d.fields.p&&d.fields.p.stringValue)o.ph=d.fields.p.stringValue;o.tr=null;if(d.fields.t&&d.fields.t.stringValue){try{o.tr=JSON.parse(d.fields.t.stringValue)}catch(e){}}return o};
 const pAv=o=>o.ph||(o.a&&real(o.a)?o.a+'/low.webp':'');
 const okv=o=>!!(o.me||o.ver>=3);
@@ -1493,7 +1493,7 @@ function resolve(l){
     f.bt.forEach(e=>{if(e.to!==me)return;const m=mb.find(x=>x.id===e.id);
       if(m){if(!h.some(x=>x.id===e.id)){h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(m.c)>sc(e.c)?'W':sc(m.c)<sc(e.c)?'L':'N',m:m.c,o:e.c,t:Date.now()})}}
       else if(!h.some(x=>x.id===e.id))f.pend=e});
-    mb.forEach(m=>{if(m.to===f.code&&!f.bt.some(e=>e.id===m.id))f.wait=m})});
+    mb.forEach(m=>{if(m.to===f.code&&!m.r&&Date.now()-(m.t||0)<864e5&&!h.some(x=>x.id===m.id)&&!f.bt.some(e=>e.id===m.id))f.wait=m})});
   h.length=Math.min(h.length,30);store.set(BH,h);
 }
 function fight(f,ch){
@@ -1504,7 +1504,7 @@ function fight(f,ch){
 window.battleResults=function(){
   const B=BATTLE,S0=sets.find(x=>x.id===setId)||{name:''};
   const best=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]),bv=val(best)||0,tot=Math.round(pack.reduce((s,c)=>s+(val(c)||0),0)*100)/100;
-  if(!B.done){B.done=1;const e={id:B.ch?B.ch.id:Math.random().toString(36).slice(2,8),to:B.f.code,s:setId,c:{n:best.name,i:best.image,p:bv,t:tot},t:Date.now()};store.set(BT,[e,...store.get(BT,[]).filter(x=>x.id!==e.id)].slice(0,3));push(true)}
+  if(!B.done){B.done=1;const e={id:B.ch?B.ch.id:Math.random().toString(36).slice(2,8),to:B.f.code,s:setId,c:{n:best.name,i:best.image,p:bv,t:tot},t:Date.now()};if(B.ch)e.r=1;store.set(BT,[e,...store.get(BT,[]).filter(x=>x.id!==e.id)].slice(0,8));if(B.ch){const hh=bh();if(!hh.some(x=>x.id===e.id)){hh.unshift({id:e.id,f:B.f.code,fn:B.f.n,w:tot>sc(B.ch.c)?'W':tot<sc(B.ch.c)?'L':'N',m:e.c,o:B.ch.c,t:Date.now()});hh.length=Math.min(hh.length,30);store.set(BH,hh)}}push(true)}
   let res='Défi envoyé ! Le résultat apparaîtra dès que '+esc(B.f.n)+' aura ouvert son booster.';
   if(B.ch){const o=sc(B.ch.c);res=(tot>o?'🏆 Tu gagnes !':tot<o?'💀 Tu perds…':'🤝 Égalité')+`<br><small>Ton total ${fmt(tot)} contre ${fmt(o)}</small>`;if(tot>o&&navigator.vibrate)navigator.vibrate([60,40,60,40,120])}
   L=pack;
