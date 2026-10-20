@@ -1559,7 +1559,7 @@ function paint(){
       const l=store.get(FR,[]).filter(x=>code?x.code!==code:x.n!==o.n);l.unshift(o);store.set(FR,l);toast(o.n+' ajouté !');paint();
     }catch(e){toast('Code introuvable')}};
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=store.get(FR,[]);l.splice(+b.dataset.del,1);store.set(FR,l);paint()});
-  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{const f=fr[+b.dataset.cancel];if(f&&f.wait){store.set(BT,store.get(BT,[]).filter(x=>x.id!==f.wait.id));f.wait=null;store.set(FR,fr);lastSig='';push(true);paint()}});
+  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{const f=fr[+b.dataset.cancel];if(f&&f.wait){store.set(BT,store.get(BT,[]).filter(x=>x.to!==f.code||x.r));f.wait=null;f.pend=null;toast('Défi annulé');store.set(FR,fr);lastSig='';push(true);paint()}});
   document.querySelectorAll('[data-fight]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");fight(fr[+b.dataset.fight],null)});
   document.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");const f=fr[+b.dataset.resp];fight(f,f.pend)});
   window.tradeUI&&window.tradeUI(fr);
