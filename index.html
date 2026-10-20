@@ -1483,16 +1483,22 @@ const card=(o,extra)=>{const v=okv(o),bu=o.me&&o.L?o.L:(o.b&&(o.b.u||(real(o.b.i
   ${o.f&&o.f.length?`<div class="pf-f">${o.f.map(x=>{const u=x.u||(real(x.i)?x.i+'/low.webp':'');return u?`<img src="${esc(u)}" alt="" onerror="this.remove()">`:''}).join('')}</div><small class="pf-fl">⭐ Cartes favorites</small>`:''}${extra||''}</div>`};
 let ok=null,lastPaint='';
 const sigP=()=>JSON.stringify([store.get(FR,[]).map(f=>({...f,d:Math.floor((f.d||0)/6e4)})),{...mine(),d:0},bh(),ok,name(),av0().length,av0().slice(-30)]);
-const bh=()=>store.get(BH,[]);
+const bh=()=>store.get(BH,[]);const bhv=()=>bh().filter(x=>!x.hide);
 const ago=d=>{const s=Math.max(0,(Date.now()-d)/1000);if(s<90)return'en ligne';const m=Math.round(s/60);if(m<60)return'vu il y a '+m+' min';const h=Math.round(m/60);if(h<24)return'vu il y a '+h+' h';const j=Math.round(h/24);return j<2?'vu hier':j<30?'vu il y a '+j+' j':'vu il y a longtemps'};
 const pres=(o,mini)=>{if(o.me)return'<span class="pres on"><i></i>en ligne</span>';if(!o.d)return'';const t=ago(o.d),c=t==='en ligne'?'on':(Date.now()-o.d<36e5?'rec':'');return`<span class="pres ${c}"><i></i>${t}</span>`};
-const rec=code=>bh().filter(h=>h.f===code).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
+const rec=code=>bh().filter(h=>h.f===code&&!h.hide).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
 function resolve(l){
   const me=myId(),mb=store.get(BT,[]),h=bh();
   l.forEach(f=>{f.pend=null;f.wait=null;if(!f.code||!f.bt)return;
     f.bt.forEach(e=>{if(e.to!==me)return;const m=mb.find(x=>x.id===e.id);
       if(m){if(!h.some(x=>x.id===e.id)){h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(m.c)>sc(e.c)?'W':sc(m.c)<sc(e.c)?'L':'N',m:m.c,o:e.c,t:Date.now()})}}
-      else if(!h.some(x=>x.id===e.id))f.pend=e});
+      else if(!h.some(x=>x.id===e.id)){
+        const o=mb.find(x=>x.to===f.code&&!x.r&&!h.some(y=>y.id===x.id));
+        if(o){/* défis croisés : on les oppose directement */
+          h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(o.c)>sc(e.c)?'W':sc(o.c)<sc(e.c)?'L':'N',m:o.c,o:e.c,t:Date.now()});
+          h.unshift({id:o.id,f:f.code,fn:f.n,w:'X',m:o.c,o:e.c,t:Date.now(),hide:1});
+          o.r=1;store.set(BT,mb)}
+        else f.pend=e}});
     mb.forEach(m=>{if(m.to===f.code&&!m.r&&Date.now()-(m.t||0)<864e5&&!h.some(x=>x.id===m.id)&&!f.bt.some(e=>e.id===m.id))f.wait=m})});
   h.length=Math.min(h.length,30);store.set(BH,h);
 }
@@ -1519,7 +1525,7 @@ window.battleResults=function(){
 const hc=(c,l)=>`<div style="flex:1;text-align:center"><small>${l}</small>${c.i?`<img src="${esc(c.i)}/low.webp" alt="" style="width:64px;display:block;margin:4px auto;border-radius:6px" onerror="this.remove()">`:''}<small>${esc(c.n)}</small><b style="display:block">${fmt(sc(c))}</b></div>`;
 function paint(){
   lastPaint=sigP();
-  const fr=store.get(FR,[]),h=bh(),S0=sets.find(x=>x.id===setId),m=mine();
+  const fr=store.get(FR,[]),h=bhv(),S0=sets.find(x=>x.id===setId),m=mine();
   const lb=[{...m,me:1},...fr].sort((a,b)=>(okv(b)?b.v:-1)-(okv(a)?a.v:-1));
   $.innerHTML=`<div class="soc"><h1>Amis</h1>
   <h2>Mon profil</h2>
@@ -1537,7 +1543,7 @@ function paint(){
   <p class="hint">Chacun ouvre un booster : le total de valeur le plus élevé gagne. Extension utilisée pour défier : <b>${esc(S0?S0.name:'—')}</b> (change-la dans Boosters).</p>
   ${h.length?h.slice(0,6).map(x=>`<div class="xlb" style="gap:8px;align-items:center"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'}</span>${hc(x.m,'Toi')}${hc(x.o,esc(x.fn))}</div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
   <h2>Mes amis (${fr.length})</h2><div class="xfl">
-  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`${f.code?pres(f):`<small>Instantané du ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>`}${f.code&&!(f.ver>=3||f.v===3)?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':f.code&&!(f.ver>=3)?'<small>ℹ️ Ses stats exactes apparaîtront dès qu’il aura ouvert la nouvelle version</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
+  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`${f.code?pres(f):`<small>Instantané du ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>`}${f.code&&!(f.ver>=3||f.v===3)?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':f.code&&!(f.ver>=3)?'<small>ℹ️ Ses stats exactes apparaîtront dès qu’il aura ouvert la nouvelle version</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small><button class="lnk" data-cancel="${i}">Annuler et relancer le défi</button>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
   document.getElementById('sav').onclick=pickAv;
   const cam=document.getElementById('cam');if(cam){cam.onclick=pickAv;const a0=document.querySelector('.pf .av');if(a0){a0.style.cursor='pointer';a0.onclick=pickAv}}
   const $n=document.getElementById('sn');
@@ -1553,6 +1559,7 @@ function paint(){
       const l=store.get(FR,[]).filter(x=>code?x.code!==code:x.n!==o.n);l.unshift(o);store.set(FR,l);toast(o.n+' ajouté !');paint();
     }catch(e){toast('Code introuvable')}};
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=store.get(FR,[]);l.splice(+b.dataset.del,1);store.set(FR,l);paint()});
+  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{const f=fr[+b.dataset.cancel];if(f&&f.wait){store.set(BT,store.get(BT,[]).filter(x=>x.id!==f.wait.id));f.wait=null;push(true);paint()}});
   document.querySelectorAll('[data-fight]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");fight(fr[+b.dataset.fight],null)});
   document.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");const f=fr[+b.dataset.resp];fight(f,f.pend)});
   window.tradeUI&&window.tradeUI(fr);
