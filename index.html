@@ -172,7 +172,7 @@ h2{margin:14px 16px 8px;font-size:16px}
 input[type=range]{width:100%;margin:10px 0 2px;accent-color:var(--ac);user-select:auto;-webkit-user-select:auto}
 .row.st .chip{flex:none}.row.st small{display:block;margin-top:2px;white-space:normal}.row.st b{white-space:normal}
 .sc .gl{opacity:.45}
-.x{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;width:42px;height:42px;border-radius:50%;border:0;background:#ffffff22;color:#fff;font-size:18px}
+.x{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;width:42px;height:42px;border-radius:50%;border:0;background:#ffffff22;color:#fff;font-size:18px}.x.cartb{right:66px;font-size:19px}
 body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.3;background:radial-gradient(circle,#fff 0 .6px,transparent 1px) 0 0/46px 46px,radial-gradient(circle,#fff8 0 .5px,transparent 1px) 23px 17px/61px 61px}
 h1{background:linear-gradient(#fff,#cdc8f5);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:24px}
 .cta{box-shadow:0 10px 26px #f2b63055,inset 0 1px #fff9;transition:transform .15s}.cta:active{transform:scale(.97)}
@@ -709,16 +709,28 @@ function tier(r,cat,pr){
   return 'R';
 }
 
+/* Prix : édition 1 pour le vintage, repli TCGplayer, anti-sous-évaluation */
+const VF=new Set(['base1','base2','base3','base5','gym1','gym2','neo1','neo2','neo3','neo4']);
+const VO={'base1-4':5500,'base1-2':1100,'base1-15':850,'base1-1':380,'base1-10':380,'neo1-9':2500,'base5-4':700};
+const UE=.86;
+function vint1(sid,cid,v){if(v==null||!VF.has(sid))return v;if(VO[cid])return VO[cid];const f=v>=200?8:v>=60?7:v>=15?6:5;return Math.round(Math.max(v*f,4)*100)/100}
+function pxs(sid,cid,m,t){m=m||{};t=t||{};
+  const g=(ks)=>{for(const k of ks){const q=t[k];if(q&&typeof q==='object'){const v=q.marketPrice??q.midPrice;if(typeof v==='number'&&v>0)return v*UE}}return null};
+  const mix=(a,b)=>a==null||a<=0?b:(b!=null&&b>=10&&a<b*.4?(a+b)/2:a);
+  let p=mix(m.trend??m.avg??null,g(['normal','unlimited','1st-edition'])),ph=mix(m['trend-holo']??m['avg-holo']??null,g(['holofoil','unlimited-holofoil','1st-edition-holofoil']));
+  if(VF.has(sid)){const f1=g(['1st-edition-holofoil','1st-edition']);p=vint1(sid,cid,p);if(f1!=null&&(p==null||f1>p))p=Math.round(f1*100)/100;ph=vint1(sid,cid,ph)}
+  return [p==null?null:Math.round(p*100)/100,ph==null?null:Math.round(ph*100)/100]}
+
 async function loadSet(id){
   const cards=cardsOf(await brief(id),id);
-  let d=store.get('d4'+cfg.lang+'_'+id,null); if(!d||Date.now()-d.t>12096e5) d={t:Date.now(),d:{}};
+  let d=store.get('d5'+cfg.lang+'_'+id,null); if(!d||Date.now()-d.t>12096e5) d={t:Date.now(),d:{}};
   const q=cards.filter(c=>!d.d[c.id]), total=q.length; let done=0;
   const worker=async()=>{while(q.length){const c=q.pop();
     try{const x=await j(`${API}/cards/${c.id}`),m=x.pricing?.cardmarket||{};
-      d.d[c.id]=[x.rarity||'',x.category||'',m.trend??m.avg??null,m['trend-holo']??m['avg-holo']??null]}catch(e){}
+      d.d[c.id]=[x.rarity||'',x.category||'',...pxs(id,c.id,m,x.pricing?.tcgplayer)]}catch(e){}
     const p=document.getElementById('prog');if(p)p.textContent=`${++done}/${total}`}};
   await Promise.all(Array.from({length:10},worker));
-  if(total) store.set('d4'+cfg.lang+'_'+id,d);
+  if(total) store.set('d5'+cfg.lang+'_'+id,d);
   return cards.map(c=>{const [r,k,p,ph]=d.d[c.id]||['','',null,null];return {...c,setId:id,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,k,p??ph),p,ph}});
 }
 
@@ -840,7 +852,7 @@ async function loadArt(a,id){
 function focusScreen(){
   $.classList.remove('fd');warmFocus(setId);
   const s=sets.find(x=>x.id===setId);
-  $.innerHTML=`<div class="fh fhs"><button class="back" onclick="${BATTLE?"BATTLE=null;go('social')":"go(TY?'tycoon':fromSet==='list'?'collection':fromSet?'set':'home')"}">${BATTLE?'‹ Amis':TY?'‹ Tycoon':fromSet==='list'?'‹ Collection':fromSet?'‹ '+esc(s.name):'‹ Boosters'}</button><a class="back gsr" target="_blank" rel="noopener" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent('booster '+s.name+' pokemon')}">🔍 Image du booster</a></div>
+  $.innerHTML=`<div class="fh fhs"><button class="back" onclick="${BATTLE?"BATTLE=null;go('social')":"go(TY?'tycoon':fromSet==='list'?'collection':fromSet?'set':'home')"}">${BATTLE?'‹ Amis':TY?'‹ Tycoon':fromSet==='list'?'‹ Collection':fromSet?'‹ '+esc(s.name):'‹ Boosters'}</button></div>
   <div class="center fpk">${packHTML(s,'on foc')}</div>
   <div class="swh">${BATTLE?'⚔️ Combat contre '+esc(BATTLE.f.n)+' · ':''}Découpe le booster avec ton doigt, dans le sens que tu veux</div>${TY?`<div class="sub" style="text-align:center">Prix : <b>${fm(packPrice(s.id))}</b> · Ton argent : <b>${fm(tyc.money)}</b></div>`:''}
   <button class="cta" id="openb">Ouvrir le booster</button>`;
@@ -1007,12 +1019,15 @@ function bindSwipe(){
   stk.onpointerup=end; stk.onpointercancel=end;
 }
 
+function buyCard(cid,sid,name){const S=(typeof sets!=='undefined'&&sets.find(x=>x.id===sid))||{},num=String(cid).split('-').pop();
+  window.open('https://www.google.com/search?q='+encodeURIComponent('acheter carte pokemon '+name+' '+(S.name||'')+' '+num+' cardmarket'),'_blank','noopener')}
+window.buyCard=buyCard;
 function zoom(c){
   if(!c) return;
   const r=RANK[c.tier], gi=r>=4?1:r>=3?.8:r>=2?.6:c.rev?.5:.25, u=img(c,'high'), foil=r>=2||c.rev;
   const d=document.createElement('div'); d.className='lb'; d.style.setProperty('--tc',tc(c));
   {const f=typeof rwNow==='function'?rwNow('f'):'none',b=typeof rwNow==='function'?rwNow('b'):'none';if(b!=='none')d.dataset.bg=b;d._fr=f}
-  d.innerHTML=`<button class="x" onclick="this.parentNode.remove()">✕</button>
+  d.innerHTML=`<button class="x" onclick="this.parentNode.remove()">✕</button><button class="x cartb" aria-label="Acheter cette carte" onclick="event.stopPropagation();buyCard('${esc(c.id)}','${esc(c.setId||'')}','${esc(c.name).replace(/'/g,'&#39;')}')">🛒</button>
   <div class="pers"><div class="tilt zc ${r>=4?'fa':''}" data-fr="${d._fr}" style="--gi:${gi}"><img src="${u}" alt="${esc(c.name)}">${foil?`<div class="hf"></div><div class="gt"></div>`:''}<div class="sh"></div><div class="rim"></div></div></div>
   <span class="bd">${esc(label(c))}</span><div class="px pv">${fmt(c.price??val(c))}</div><div class="pch pv"></div><div class="hint">Bouge ton doigt sur la carte ✨</div>`;
   d.onclick=e=>{if(!e.target.closest('.tilt')&&!e.target.closest('.x'))d.remove()}; document.body.appendChild(d);sfx.zoom();try{priceChart(c,d)}catch(e){}
@@ -1132,7 +1147,7 @@ const UPG={
 const BULK=[1,5,10,25,100,500,2000],BULKC=[150,1000,8000,60000,500000],BULKT=['','×10','×25','×100','×500','×2000'];
 const upCost=k=>{const u=UPG[k];return Math.round(u.base*Math.pow(u.g,tyc.lv[k]))};
 const bulkList=()=>BULK.slice(0,2+tyc.lv.bulk);
-const FB={E:0,C:.03,U:.06,R:.15,RH:.4,UR:1.5,SR:4};
+const FB={E:0,C:.03,U:.06,R:.15,RH:.4,UR:3,SR:10};
 const cv=c=>{const v=val(c);return v!=null?v:(FB[c.tier]??.05)};
 const fm=n=>n>=1e9?(n/1e9).toLocaleString('fr-FR',{maximumFractionDigits:2})+' Md €':n>=1e6?(n/1e6).toLocaleString('fr-FR',{maximumFractionDigits:2})+' M €':n>=1e5?Math.round(n).toLocaleString('fr-FR')+' €':fmt(n);
 const sellMult=()=>1+.08*tyc.lv.sell+.25*tyc.star;
@@ -1598,9 +1613,9 @@ async function rates(sid){if(RATE[sid])return RATE[sid];
   for(let k=0;k<N;k+=100){fairDraw(()=>{for(let i=0;i<100;i++){new Set(drawNorm(cards,packSize(S0),is30(S0),isVint(S0)).map(c=>c.id)).forEach(q=>cnt[q]=(cnt[q]||0)+1)}});await new Promise(r=>setTimeout(r,0))}
   return {cnt,N}})()}
 async function enrichCard(c,sid){
-  const k='d4'+cfg.lang+'_'+sid;let d=store.get(k,null);if(!d||Date.now()-d.t>12096e5)d={t:Date.now(),d:{}};
+  const k='d5'+cfg.lang+'_'+sid;let d=store.get(k,null);if(!d||Date.now()-d.t>12096e5)d={t:Date.now(),d:{}};
   let e=d.d[c.id];
-  if(!e&&!c.ni){try{const x=await j(`${API}/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{};e=[x.rarity||'',x.category||'',m.trend??m.avg??null,m['trend-holo']??m['avg-holo']??null];d.d[c.id]=e;store.set(k,d)}catch(_){}}
+  if(!e&&!c.ni){try{const x=await j(`${API}/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{};e=[x.rarity||'',x.category||'',...pxs(sid,c.id,m,x.pricing&&x.pricing.tcgplayer)];d.d[c.id]=e;store.set(k,d)}catch(_){}}
   const [r,kc,p,ph]=e||['','',null,null];
   return {...c,setId:sid,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,kc,p??ph),p,ph}}
 window.zoomAny=async id=>{const sid=viewId,c=cardsOf(B[sid],sid).find(x=>x.id===id);if(!c)return;
@@ -1614,7 +1629,8 @@ const _rs=window.results;window.results=function(){_rs();if(BATTLE||!MTOT)return
   if(MLAST!==pack){MLAST=pack;MSUM+=pack.reduce((t,c)=>t+(val(c)||0),0);MULT--}
   const done=MTOT-MULT;let h=`<div class="pc"><b>Série : ${done}/${MTOT} boosters</b><b style="font-size:20px">${fmt(MSUM)}</b><small>Valeur cumulée</small>${MULT>0?'<button class="cta" id="xnx">▶ Booster suivant</button>':'<small>Série terminée ✓</small>'}</div>`;
   $.insertAdjacentHTML('afterbegin',h);const n=document.getElementById('xnx');if(n)n.onclick=()=>go('focus');if(MULT<=0){MTOT=0;MULT=0}};
-const estP=c=>c.rp?2:({E:.1,C:.1,U:.15,R:.5,RH:1.5,UR:4,SR:8})[c.tier]??.2;
+const estP=c=>c.rp?2:({E:.05,C:.1,U:.15,R:.4,RH:1.2,UR:5,SR:15})[c.tier]??.2;
+(()=>{try{if(store.get('pfix1',0))return;let n=0;Object.values(col).forEach(c=>{if(c&&VF.has(c.setId)&&c.price!=null){c.price=vint1(c.setId,c.id,c.price);n++}});if(n)store.set(KEY,col);store.set('pfix1',1)}catch(e){}})();
 const pr=c=>{const v=c.price??(c.o?(c.o[0]??c.o[1]):val(c));return v==null?estP(c):v};
 function trade(d,c){return;if(BATTLE||TY)return;
   const v=pr(c),est=c.price==null&&val(c)==null,sell=Math.round(v*80)/100,buy=Math.round(v*125)/100;
