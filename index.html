@@ -962,6 +962,7 @@ async function tearOpen(p,pts){
     pack.forEach(c=>c.isNew=!col[c.id]);
     pack.forEach(c=>{try{new Image().src=img(c,'high')}catch(e){}});
     packVal=pack.reduce((s,c)=>s+(val(c)||0),0);
+    if(!BATTLE&&(!TY||tyc.keep)&&window.pbPack)window.pbPack(pack);
     if(!BATTLE&&(!TY||tyc.keep)) pack.forEach(c=>{const o=col[c.id];col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:(c.o?(c.o[0]??c.o[1]):(c.p??c.ph))??o?.price??null,count:(o?.count||0)+1}});
     if(TY){const pr=tyc.etb>0?0:packPrice(id),mx=pack.reduce((m,c)=>Math.max(m,val(c)||0),0);tycPay={cost:pr,rev:packVal};tyc.money+=packVal-pr;tyc.life+=packVal;tyc.run+=packVal;tyc.packs++;if(tyc.etb>0)tyc.etb--;if(mx>tyc.best)tyc.best=mx;saveT()}
     if(!BATTLE){stats.packs++;{const k=typeof id==='string'?id:setId;stats.bs=stats.bs||{};stats.bs[k]=(stats.bs[k]||0)+1}
@@ -1799,34 +1800,35 @@ const pbd=()=>{const v=+store.get(PBK,0);return v>0?Math.floor(v):0};
 const pbSet=v=>{store.set(PBK,Math.max(0,Math.floor(v)));pbPill()};
 const pbCost=c=>{const v=Math.max(0,+(c.price??c.p??c.ph??0))||0;return Math.min(30000,Math.max(1,Math.round((PBT[c.tier]??4)+12*Math.pow(v,.9))))};
 const pbN=n=>n.toLocaleString('fr-FR');
+const PB_SELL=.15;const pbSV=c=>Math.max(1,Math.round(pbCost(c)*PB_SELL));
 const pn=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 document.head.insertAdjacentHTML('beforeend','<style>#pbp{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;z-index:35;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:22px;background:var(--pan2,#fff);color:var(--ink,#222);border:1px solid var(--bd,#0002);box-shadow:0 4px 14px var(--sh,#0003);font-size:15px;cursor:pointer}#pbp b{font-weight:900}#pbp small{font-size:11px;opacity:.7}body.ovx #pbp{display:none!important}.pbbal{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:6px 16px 12px;padding:14px;border-radius:22px;background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2a00;font-weight:900;box-shadow:0 8px 22px #ff9f4355}.pbbal span{font-size:30px}.pbbal b{font-size:42px;line-height:1}.pbbal small{font-size:15px;font-weight:800}.pbg2{position:relative}.pbq{position:absolute;top:4px;left:4px;background:#000b;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;font-weight:800}.pbv{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:#ffd166;color:#3a2a00;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:900;white-space:nowrap}.pbt{margin:10px 16px;font-size:13px;opacity:.85;text-align:center;line-height:1.5}.pbcost{font-size:34px;font-weight:900;color:#ffd166}.pbrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}</style>');
 function pbPill(){let p=document.getElementById('pbp');if(!p){p=document.createElement('div');p.id='pbp';p.onclick=()=>openX(xPb);document.body.appendChild(p)}
-  p.innerHTML=`<span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou</small>`;p.style.display=screen==='reveal'?'none':'flex'}
-const _rdPb=window.render;window.render=function(){const r=_rdPb.apply(this,arguments);pbPill();return r};
+  p.innerHTML=`<span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou</small>${pbDaily().ok?'<span title="Bonus du jour">🎁</span>':''}`;p.style.display=screen==='reveal'?'none':'flex'}
+const _rdPb=window.render;window.render=function(){const r=_rdPb.apply(this,arguments);pbPill();pbCheckSets();pbGoals();return r};
 setTimeout(pbPill,0);
 const pbHead=t=>`<h1>${t}</h1><div class="pbbal"><span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou${pbd()>1?'s':''}</small></div>`;
 const pbSave=()=>{store.set(KEY,col)};
 function xPb(){const all=Object.values(col),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0);
-  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">1 carte échangée = 1 🪙 Pokébidou. Dépense-les pour acheter n’importe quelle carte : plus elle est rare, plus elle coûte cher.</p>
-  <button class="cta" id="pbs">♻️ Échanger mes cartes<br><small>${dbl} doublon${dbl>1?'s':''} · ${all.length} carte${all.length>1?'s':''} différente${all.length>1?'s':''}</small></button>
+  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">Échange tes doublons contre des 🪙 Pokébidou : plus la carte est rare, plus elle rapporte (environ 15 % de son prix en boutique). Dépense-les pour acheter n’importe quelle carte.</p>
+  ${pbDailyHTML()}<button class="cta" id="pbs">♻️ Échanger mes cartes<br><small>${dbl} doublon${dbl>1?'s':''} · ${all.length} carte${all.length>1?'s':''} différente${all.length>1?'s':''}</small></button>
   <button class="cta" id="pbb">🛒 Acheter des cartes</button>
-  <div class="pbt"><b>Tarifs (dès)</b><br>Énergie 2 · Commune 4 · Peu commune 8 · Rare 20<br>Holo 60 · Ultra rare 200 · Secrète 400<br>+ un gros supplément selon la valeur réelle : une carte à 150 € coûte ≈ 1 500 🪙, une carte à plusieurs milliers d’euros, des dizaines de milliers</div>
+  ${pbGoalsHTML()}<div class="pbt"><b>Tarifs (dès)</b><br>Énergie 2 · Commune 4 · Peu commune 8 · Rare 20<br>Holo 60 · Ultra rare 200 · Secrète 400<br>+ un gros supplément selon la valeur réelle : une carte à 150 € coûte ≈ 1 500 🪙, une carte à plusieurs milliers d’euros, des dizaines de milliers</div>
   <div class="grow"></div><button class="lnk" onclick="go('collection')">Retour</button>`;
-  document.getElementById('pbs').onclick=()=>openX(xPbSell);document.getElementById('pbb').onclick=()=>{pbq='';openX(xPbShop)}}
+  pbDailyBind();document.getElementById('pbs').onclick=()=>openX(xPbSell);document.getElementById('pbb').onclick=()=>{pbq='';openX(xPbShop)}}
 let pbF='dup';
-function xPbSell(){const all=Object.values(col).sort((a,b)=>b.count-a.count||String(a.name).localeCompare(b.name)),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0),list=pbF==='dup'?all.filter(c=>c.count>1):all;
-  $.innerHTML=`${pbHead('♻️ Échanger')}<button class="cta" id="pba" ${dbl?'':'disabled style="opacity:.45"'}>Échanger tous mes doublons · +${dbl} 🪙</button>
+function xPbSell(){const all=Object.values(col).sort((a,b)=>b.count-a.count||String(a.name).localeCompare(b.name)),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0),gain=all.reduce((s,c)=>s+Math.max(0,c.count-1)*pbSV(c),0),list=pbF==='dup'?all.filter(c=>c.count>1):all;
+  $.innerHTML=`${pbHead('♻️ Échanger')}<button class="cta" id="pba" ${dbl?'':'disabled style="opacity:.45"'}>Échanger tous mes doublons · +${pbN(gain)} 🪙</button>
   <div class="pbrow"><button class="chip ${pbF==='dup'?'on':''}" data-f="dup">Doublons</button><button class="chip ${pbF==='all'?'on':''}" data-f="all">Toutes mes cartes</button></div>
-  <p class="hint">Touche une carte pour en échanger 1 exemplaire (+1 🪙).</p>
-  <div class="grid" id="pbgr">${list.length?list.map(c=>`<div class="g pbg2" data-id="${esc(c.id)}" style="--i:0;--tc:${tc(c)}"><img src="${img(c,'low')}" alt="" loading="lazy"><span class="pbq">×${c.count}</span><span class="pbv">+1 🪙</span></div>`).join(''):'<p class="empty">Aucun doublon à échanger pour l’instant.</p>'}</div>
+  <p class="hint">Touche une carte pour en échanger 1 exemplaire : plus elle est rare, plus elle rapporte.</p>
+  <div class="grid" id="pbgr">${list.length?list.map(c=>`<div class="g pbg2" data-id="${esc(c.id)}" style="--i:0;--tc:${tc(c)}"><img src="${img(c,'low')}" alt="" loading="lazy"><span class="pbq">×${c.count}</span><span class="pbv">+${pbSV(c)} 🪙</span></div>`).join(''):'<p class="empty">Aucun doublon à échanger pour l’instant.</p>'}</div>
   <div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
   document.getElementById('bk').onclick=()=>openX(xPb);
   document.querySelectorAll('.pbrow [data-f]').forEach(b=>b.onclick=()=>{pbF=b.dataset.f;xPbSell()});
-  document.getElementById('pba').onclick=()=>{if(!dbl)return;if(!confirm('Échanger '+dbl+' doublon'+(dbl>1?'s':'')+' contre '+dbl+' 🪙 ?'))return;all.forEach(c=>{if(c.count>1)c.count=1});pbSave();pbSet(pbd()+dbl);toast('+'+dbl+' 🪙');xPbSell()};
+  document.getElementById('pba').onclick=()=>{if(!dbl)return;if(!confirm('Échanger '+dbl+' doublon'+(dbl>1?'s':'')+' contre '+pbN(gain)+' 🪙 ?'))return;all.forEach(c=>{if(c.count>1)c.count=1});pbSave();pbSet(pbd()+gain);toast('+'+pbN(gain)+' 🪙');xPbSell()};
   document.getElementById('pbgr').onclick=e=>{const t=e.target.closest('.g');if(!t)return;const c=col[t.dataset.id];if(!c)return;
-    if(c.count<2&&!confirm('Échanger ta dernière carte « '+c.name+' » contre 1 🪙 ?'))return;
-    c.count--;if(c.count<1)delete col[c.id];pbSave();pbSet(pbd()+1);toast('+1 🪙');const y=window.scrollY;xPbSell();window.scrollTo(0,y)}}
+    const v=pbSV(c);if(c.count<2&&!confirm('Échanger ta dernière carte « '+c.name+' » contre '+v+' 🪙 ?'))return;
+    c.count--;if(c.count<1)delete col[c.id];pbSave();pbSet(pbd()+v);toast('+'+v+' 🪙');const y=window.scrollY;xPbSell();window.scrollTo(0,y)}}
 let pbq='',pbS=null,pbM=1;
 function xPbShop(){const rows=()=>sets.filter(s=>!HID.has(s.id)&&(!pbq||pn(s.name).includes(pn(pbq)))).map(s=>`<div class="xlb" data-s="${esc(s.id)}" style="cursor:pointer;margin:4px 0"><span>${esc(s.name)}</span><b>›</b></div>`).join('')||'<p class="empty">Aucune extension.</p>';
   $.innerHTML=`${pbHead('🛒 Acheter')}<p class="hint">Choisis une extension.</p><input id="pbqi" placeholder="Chercher une extension" value="${esc(pbq)}" style="width:calc(100% - 32px);margin:0 16px 8px"><div id="pbl">${rows()}</div><div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
@@ -1852,7 +1854,7 @@ function pbBuy(c){const cost=pbCost(c),bal=pbd(),n=col[c.id]?col[c.id].count:0,o
   document.body.appendChild(o);o.querySelector('#pbx').onclick=()=>o.remove();
   o.querySelector('#pby').onclick=()=>{if(pbd()<cost)return;const e=col[c.id];pbSet(pbd()-cost);
     col[c.id]={id:c.id,setId:c.setId||pbS,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:(c.p??c.ph)??e?.price??null,count:(e?.count||0)+1};
-    pbSave();o.remove();toast('🎉 '+c.name+' ajoutée à ta collection !');if(navigator.vibrate)navigator.vibrate(40);xPbSet()}}
+    pbSave();o.remove();toast('🎉 '+c.name+' ajoutée à ta collection !');pbCheckSets();if(navigator.vibrate)navigator.vibrate(40);xPbSet()}}
 const _cPb=window.collection;window.collection=function(){_cPb.apply(this,arguments);$.insertAdjacentHTML('afterbegin','<button class="cta" id="xpb" style="margin:0 0 10px;width:100%">🪙 Boutique Pokébidou · '+pbN(pbd())+'</button>');const b=document.getElementById('xpb');if(b)b.onclick=()=>openX(xPb)};
 
 /* Achat / échange rapide depuis la fiche d'une carte */
@@ -1865,10 +1867,48 @@ const _zPb=window.zoom;window.zoom=function(c){_zPb.apply(this,arguments);if(!c|
       col[c.id]={id:c.id,setId:c.setId||String(c.id).replace(/-[^-]+$/,''),name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:c.price??(c.p??c.ph)??null,count:1};
       pbSave();d.remove();toast('🎉 '+c.name+' ajoutée ! −'+pbN(cost)+' 🪙');if(navigator.vibrate)navigator.vibrate(40);
       const y=window.scrollY;try{render()}catch(_){}window.scrollTo(0,y)}}
-  else if(o.count>1){box.innerHTML=`<button class="chip" id="pbz">♻️ Échanger un doublon · +1 🪙</button><small>Tu as 🪙 ${pbN(bal)} · ×${o.count} en collection</small>`;
-    d.appendChild(box);box.querySelector('#pbz').onclick=e=>{e.stopPropagation();const q=col[c.id];if(!q||q.count<2)return;q.count--;pbSave();pbSet(pbd()+1);toast('+1 🪙');
+  else if(o.count>1){box.innerHTML=`<button class="chip" id="pbz">♻️ Échanger un doublon · +${pbSV(o)} 🪙</button><small>Tu as 🪙 ${pbN(bal)} · ×${o.count} en collection</small>`;
+    d.appendChild(box);box.querySelector('#pbz').onclick=e=>{e.stopPropagation();const q=col[c.id];if(!q||q.count<2)return;const v=pbSV(q);q.count--;pbSave();pbSet(pbd()+v);toast('+'+v+' 🪙');
       const y=window.scrollY;d.remove();try{render()}catch(_){}window.scrollTo(0,y)}}
 };
+
+/* ===== Pokébidou : accès pour les échanges, bonus du jour, extensions complétées ===== */
+window.pbGet=pbd;window.pbAdd=d=>pbSet(pbd()+d);window.pbN=pbN;
+const PBD='pb_daily_v1',PB_SET=100,PBSD='pb_sets_v1';
+function pbDay(n){const t=new Date();t.setDate(t.getDate()-(n||0));return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()}
+/* Bonus du jour : 5 🪙 + 2 par jour de série (jusqu'à +28), +20 tous les 7 jours */
+function pbDaily(){const o=store.get(PBD,{d:'',s:0}),td=pbDay(0),ok=o.d!==td,s=o.d===td?o.s:(o.d===pbDay(1)?o.s+1:1);return{ok,s,r:ok?5+2*Math.min(s-1,14)+(s%7===0?20:0):0}}
+function pbDailyHTML(){const d=pbDaily();return d.ok?`<button class="cta" id="pbdl" style="background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2a00">🎁 Bonus du jour · +${d.r} 🪙<br><small>Série de ${d.s} jour${d.s>1?'s':''}${d.s%7===0?' · bonus de semaine inclus !':''}</small></button>`:`<p class="hint">🎁 Bonus du jour récupéré · série de ${d.s} jour${d.s>1?'s':''}. Reviens demain !</p>`}
+function pbDailyBind(){const b=document.getElementById('pbdl');if(!b)return;b.onclick=()=>{const d=pbDaily();if(!d.ok)return;store.set(PBD,{d:pbDay(0),s:d.s});pbSet(pbd()+d.r);toast('🎁 +'+d.r+' 🪙 · série de '+d.s+' jour'+(d.s>1?'s':''));if(navigator.vibrate)navigator.vibrate(40);openX(xPb)}}
+/* Extension complétée : PB_SET 🪙, une seule fois par extension (les extensions déjà complètes comptent aussi) */
+function pbCheckSets(){try{
+  if(!Array.isArray(sets)||!sets.length)return;
+  const cnt={};Object.values(col).forEach(c=>{cnt[c.setId]=(cnt[c.setId]||0)+1});
+  const full=sets.filter(s=>{const n=setTotal(s);return n&&(cnt[s.id]||0)>=n});
+  const done=store.get(PBSD,[]),nw=full.filter(s=>!done.includes(s.id));if(!nw.length)return;
+  store.set(PBSD,done.concat(nw.map(s=>s.id)));
+  const gain=nw.length*PB_SET;pbSet(pbd()+gain);
+  toast('🏆 '+(nw.length>1?nw.length+' extensions complétées':'Extension complétée : '+nw[0].name)+' · +'+pbN(gain)+' 🪙');
+  if(navigator.vibrate)navigator.vibrate([40,40,80])}catch(e){}}
+
+/* ===== Gains : prime doublons rares, 1er booster du jour, objectifs ===== */
+const PBGK='pb_goals_v1',PBP={R:3,RH:8,UR:25,SR:50},PB_FP=5;
+const PBG=[['holo','Premier holo (Rare holo ou mieux)',25,()=>Object.values(col).some(c=>(RANK[c.tier]||0)>=3)],
+['c100','Une carte à plus de 100 €',50,()=>Object.values(col).some(c=>(+c.price||0)>=100)],
+...[[50,20],[100,40],[250,100],[500,200],[1000,400],[2500,800]].map(([n,g])=>['n'+n,n+' cartes différentes',g,()=>Object.keys(col).length>=n])];
+function pbGoals(){try{const d=store.get(PBGK,[]),nw=PBG.filter(g=>!d.includes(g[0])&&g[3]());if(!nw.length)return;
+  store.set(PBGK,d.concat(nw.map(g=>g[0])));const gain=nw.reduce((x,g)=>x+g[2],0);pbSet(pbd()+gain);
+  toast('🎯 '+(nw.length>1?nw.length+' objectifs atteints':'Objectif : '+nw[0][1])+' · +'+pbN(gain)+' 🪙');
+  if(navigator.vibrate)navigator.vibrate([40,40,80])}catch(e){}}
+window.pbPack=function(pk){try{let g=0,n=0,fp=0;const seen={};
+  pk.forEach(c=>{const h=(col[c.id]?col[c.id].count:0)+(seen[c.id]||0);seen[c.id]=(seen[c.id]||0)+1;if(h>0&&PBP[c.tier]){g+=PBP[c.tier];n++}});
+  const td=pbDay(0);if(store.get('pb_fp','')!==td){store.set('pb_fp',td);g+=PB_FP;fp=1}
+  if(g>0){pbSet(pbd()+g);toast([fp?'🎴 1er booster du jour +'+PB_FP:'',n?'♻️ '+n+' doublon'+(n>1?'s':'')+' rare'+(n>1?'s':'')+' +'+(g-(fp?PB_FP:0)):''].filter(Boolean).join(' · ')+' 🪙')}}catch(e){}};
+function pbGoalsHTML(){const d=store.get(PBGK,[]),r=(t,s,g)=>`<div class="row"><div class="t"><b>${t}</b>${s?`<small>${s}</small>`:''}</div><em>${g}</em></div>`;
+  return '<h2>🎯 Comment gagner des 🪙</h2>'+PBG.map(g=>r((d.includes(g[0])?'✅ ':'🔒 ')+g[1],'','+'+g[2]+' 🪙')).join('')
+  +r('🏆 Extension complétée','Une seule fois par extension','+'+PB_SET+' 🪙')
+  +r('♻️ Doublon rare tiré en booster','Rare 3 · Holo 8 · Ultra rare 25 · Secrète 50','auto')
+  +r('🎴 1er booster du jour','','+'+PB_FP+' 🪙')+r('🎁 Bonus du jour','Série de jours d’affilée','+5 à +33 🪙')}
 })();
 </script>
 <style>
@@ -2660,6 +2700,14 @@ const thumb=c=>{try{return img(c,'low')}catch(e){return''}};
 const ov=html=>{const o=document.createElement('div');o.className='xbt xtr';o.style.color='#f3f1ff';o.style.zIndex=70;o.innerHTML=html;document.body.appendChild(o);return o};
 const addCard=c=>{const o=col[c.id];col[c.id]=o?{...o,count:o.count+1}:{...c,count:1}};
 const saveCol=()=>{store.set(KEY,col);try{_at=0}catch(e){}};
+/* Pokébidou dans les échanges : offre.pb > 0 = le proposeur paie, < 0 = l'ami paie. Tout reste dans le champ « t » déjà synchronisé. */
+const PBX=o=>{const v=Math.trunc(+o.pb);return Number.isFinite(v)?Math.max(-99999,Math.min(99999,v)):0};
+const okO=o=>{if(!o||!(o.g||o.w))return false;const pb=PBX(o);return !!(o.g||pb>0)&&!!(o.w||pb<0)};
+const nfr=n=>Number(n).toLocaleString('fr-FR');
+const coinBox=(n,l)=>`<div><small>${l}</small><div style="font-size:46px;line-height:1.4">🪙</div><small>Pokébidou</small><b class="pv">${nfr(n)}</b></div>`;
+const tcalc=(gs,ws,dir,amt,cx,bal)=>{const a=Math.max(0,Math.min(99999,Math.trunc(+amt)||0)),d=!cx?1:(gs&&!ws?-1:ws&&!gs?1:dir),pb=cx?d*a:0;
+  let ok=!!(gs||ws);if(!cx&&!(gs&&ws))ok=false;if(ok&&!gs&&pb<=0)ok=false;if(ok&&!ws&&pb>=0)ok=false;if(ok&&pb>0&&bal<pb)ok=false;
+  return{pb,d,ok}};
 
 /* ---------- Historique complet ---------- */
 function histOpen(){
@@ -2696,46 +2744,64 @@ const _rs2=window.results;window.results=function(){_rs2.apply(this,arguments);
 /* ---------- Échanges de doublons entre amis ---------- */
 window.tradeDoc=function(){
   const d=Object.values(col).filter(c=>c.count>1&&!c.gen).sort((a,b)=>(b.price||0)-(a.price||0)).slice(0,40).map(c=>pk(c,c.count-1));
-  return {d,o:store.get('trd_o',[]),k:store.get('trd_k',[]).slice(0,60)}};
+  return {d,o:store.get('trd_o',[]),k:store.get('trd_k',[]).slice(0,60),cx:1}};
 const incoming=l=>{const me=pid();if(!me)return[];const done=new Set(store.get('trd_k',[]).map(x=>x.id)),out=[];
-  (l||store.get(FRK,[])).forEach(f=>{if(f.tr&&f.tr.o)f.tr.o.forEach(o=>{if(o.to===me&&!done.has(o.id)&&Date.now()-o.ts<7*864e5)out.push({f,o})})});return out};
+  (l||store.get(FRK,[])).forEach(f=>{if(f.tr&&f.tr.o)f.tr.o.forEach(o=>{if(o.to===me&&!done.has(o.id)&&Date.now()-o.ts<7*864e5&&okO(o))out.push({f,o})})});return out};
 window.tradeIn=l=>incoming(l).length;
 window.tradeSync=function(l){const mo=store.get('trd_o',[]);if(!mo.length)return false;let ch=false;const keep=[],log=store.get('trd_log',[]);
-  for(const o of mo){const f=l.find(x=>x.code===o.to),r=f&&f.tr&&f.tr.k&&f.tr.k.find(x=>x.id===o.id);
+  for(const o of mo){const f=l.find(x=>x.code===o.to),r=f&&f.tr&&f.tr.k&&f.tr.k.find(x=>x.id===o.id),pb=PBX(o);
     if(r){ch=true;
-      if(r.r===1){const c=col[o.g.i];if(c){c.count--;if(c.count<=0)delete col[o.g.i]}addCard(un(o.w));log.unshift({t:Date.now(),f:f.n,g:o.g.n,w:o.w.n});toast('🔄 '+f.n+' a accepté ! Tu reçois '+o.w.n)}
-      else toast('❌ '+f.n+' a refusé ton échange')}
-    else if(Date.now()-o.ts>7*864e5)ch=true;
+      if(r.r===1){const c=o.g&&col[o.g.i];if(c){c.count--;if(c.count<=0)delete col[o.g.i]}if(o.w)addCard(un(o.w));if(pb<0&&window.pbAdd)window.pbAdd(-pb);
+        log.unshift({t:Date.now(),f:f.n,g:o.g?o.g.n:'🪙 '+nfr(Math.abs(pb)),w:o.w?o.w.n:'🪙 '+nfr(Math.abs(pb))});
+        toast('🔄 '+f.n+' a accepté ! Tu reçois '+(o.w?o.w.n:'')+(pb<0?(o.w?' + ':'')+nfr(-pb)+' 🪙':''))}
+      else{if(pb>0&&window.pbAdd)window.pbAdd(pb);toast('❌ '+f.n+' a refusé ton échange'+(pb>0?' · '+nfr(pb)+' 🪙 remboursés':''))}}
+    else if(Date.now()-o.ts>7*864e5){ch=true;if(pb>0&&window.pbAdd)window.pbAdd(pb)}
     else keep.push(o)}
   if(ch){store.set('trd_o',keep);store.set('trd_log',log.slice(0,30));saveCol()}return ch};
-function accept(f,o){const c=col[o.w.i];if(!c||c.count<2)return toast('Tu n’as plus ce doublon');
-  c.count--;addCard(un(o.g));
+function accept(f,o){if(!okO(o))return;const pb=PBX(o);
+  if(o.w){const c=col[o.w.i];if(!c||c.count<2)return toast('Tu n’as plus ce doublon')}
+  if(pb<0&&(!window.pbGet||window.pbGet()<-pb))return toast('Il te manque des Pokébidou pour cet échange');
+  if(o.w)col[o.w.i].count--;if(o.g)addCard(un(o.g));if(pb&&window.pbAdd)window.pbAdd(pb);
   const k=store.get('trd_k',[]);k.unshift({id:o.id,f:f.code,r:1,ts:Date.now()});store.set('trd_k',k.slice(0,60));
-  const log=store.get('trd_log',[]);log.unshift({t:Date.now(),f:f.n,g:o.w.n,w:o.g.n});store.set('trd_log',log.slice(0,30));
-  saveCol();toast('✅ Échange accepté : +'+o.g.n);window.xpush&&window.xpush(true);go('social')}
+  const log=store.get('trd_log',[]);log.unshift({t:Date.now(),f:f.n,g:o.w?o.w.n:'🪙 '+nfr(Math.abs(pb)),w:o.g?o.g.n:'🪙 '+nfr(Math.abs(pb))});store.set('trd_log',log.slice(0,30));
+  saveCol();toast('✅ Échange accepté : +'+(o.g?o.g.n:'')+(pb>0?(o.g?' + ':'')+nfr(pb)+' 🪙':pb<0?' · −'+nfr(-pb)+' 🪙':''));window.xpush&&window.xpush(true);go('social')}
 function decline(f,o){const k=store.get('trd_k',[]);k.unshift({id:o.id,f:f.code,r:0,ts:Date.now()});store.set('trd_k',k.slice(0,60));window.xpush&&window.xpush(true);go('social')}
 const cardBox=(p,l)=>{const c=un(p);return `<div><small>${l}</small><img src="${esc(thumb(c))}" alt="" onerror="this.style.opacity=.2"><small>${esc(p.n)}</small><b class="pv">${fmt(p.v||0)}</b></div>`};
+const side=(p,n,l)=>p?cardBox(p,l):coinBox(n,l);
 function tradeOpen(f){
   if(!pname())return toast('Choisis d’abord un pseudo');
-  const mine=Object.values(col).filter(c=>c.count>1&&!c.gen).sort((a,b)=>(b.price||0)-(a.price||0)),theirs=(f.tr&&f.tr.d)||[];
-  let gs=null,ws=null;const o=ov('');
+  const mine=Object.values(col).filter(c=>c.count>1&&!c.gen).sort((a,b)=>(b.price||0)-(a.price||0)),theirs=(f.tr&&f.tr.d)||[],cx=!!(f.tr&&f.tr.cx&&window.pbGet);
+  let gs=null,ws=null,dir=1,amt=0;const o=ov('');
   const cell=(c,sel,sp,k)=>`<button class="tc ${sel?'on':''}" data-${k}="${esc(c.id)}"><img loading="lazy" src="${esc(thumb(c))}" alt="" onerror="this.style.opacity=.2"><small class="pv">${fmt(c.price||0)}</small>${sp>1?`<i>×${sp}</i>`:''}</button>`;
-  const draw=()=>{const y=o.scrollTop,g=gs&&col[gs],w=ws&&theirs.find(x=>x.i===ws),gv=g?(g.price||0):0,wv=w?(w.v||0):0;
-    o.innerHTML=`<h2>🔄 Échange avec ${esc(f.n)}</h2><p class="hint">Seuls les doublons peuvent être échangés (1 exemplaire contre 1 exemplaire).</p>
+  const calc=()=>tcalc(gs,ws,dir,amt,cx,cx?window.pbGet():0);
+  const upd=()=>{const g=gs&&col[gs],w=ws&&theirs.find(x=>x.i===ws),r=calc(),pb=r.pb,bal=cx?window.pbGet():0,gv=g?(g.price||0):0,wv=w?(w.v||0):0;
+    const give=[g?fmt(gv):'',pb>0?'🪙 '+nfr(pb):''].filter(Boolean).join(' + ')||'—',rec=[w?fmt(wv):'',pb<0?'🪙 '+nfr(-pb):''].filter(Boolean).join(' + ')||'—';
+    const sm=o.querySelector('#xsum');
+    if(sm)sm.innerHTML=(g||w)?`Tu donnes ${give} · tu reçois ${rec}${g&&w&&!pb&&wv>gv*1.5&&wv-gv>1?'<br><small>⚠️ Échange plutôt déséquilibré en ta défaveur</small>':''}${pb>0?`<br><small>${bal<pb?'Il te manque '+nfr(pb-bal)+' 🪙.':'Tes 🪙 sont mis de côté jusqu’à la réponse (remboursés si refus, annulation ou expiration).'}</small>`:''}`:'';
+    const b=o.querySelector('#xtp');if(b)b.disabled=!r.ok};
+  const draw=()=>{const y=o.scrollTop,r=calc(),lock=!(gs&&ws);
+    o.innerHTML=`<h2>🔄 Échange avec ${esc(f.n)}</h2><p class="hint">${cx?'Échange, achète ou vends des doublons (1 exemplaire par carte). Tu peux y ajouter des 🪙 Pokébidou.':'Seuls les doublons peuvent être échangés (1 exemplaire contre 1 exemplaire).'}</p>
     <h3 style="margin:6px 0 0">Tu donnes</h3>
     ${mine.length?`<div class="trg">${mine.map(c=>cell(c,c.id===gs,c.count-1,'g')).join('')}</div>`:'<p class="hint">Tu n’as pas encore de doublons.</p>'}
     <h3 style="margin:10px 0 0">Tu veux</h3>
     ${f.tr?(theirs.length?`<div class="trg">${theirs.map(p=>cell(un(p),p.i===ws,p.c,'w')).join('')}</div>`:`<p class="hint">${esc(f.n)} n’a pas de doublons à échanger pour l’instant.</p>`):`<p class="hint">${esc(f.n)} doit mettre le jeu à jour et se reconnecter pour échanger.</p>`}
-    ${g&&w?`<div class="pv" style="font-size:14px">Tu donnes ${fmt(gv)} · tu reçois ${fmt(wv)}${wv>gv*1.5&&wv-gv>1?'<br><small>⚠️ Échange plutôt déséquilibré en ta défaveur</small>':''}</div>`:''}
-    <button class="cta" id="xtp" ${g&&w?'':'disabled'} style="width:100%;max-width:560px">Proposer l’échange</button><button class="lnk" id="xtc">Fermer</button>`;
+    ${cx?`<h3 style="margin:10px 0 0">🪙 Pokébidou</h3><div class="pbrow"><button class="chip ${r.d>0?'on':''}" data-d="1" ${lock?'disabled':''}>Je paie</button><button class="chip ${r.d<0?'on':''}" data-d="-1" ${lock?'disabled':''}>Je reçois</button></div><input id="xamt" type="number" inputmode="numeric" min="0" max="99999" placeholder="Montant en 🪙" value="${amt||''}" style="width:calc(100% - 32px);max-width:300px;margin:4px 16px"><small>Tu as 🪙 ${nfr(window.pbGet())}${lock?' · seule une carte choisie : achat = tu paies, vente = tu reçois':''}</small>`:(f.tr?'<p class="hint">Ton ami doit mettre l’app à jour pour utiliser les 🪙 Pokébidou.</p>':'')}
+    <div class="pv" id="xsum" style="font-size:14px"></div>
+    <button class="cta" id="xtp" disabled style="width:100%;max-width:560px">Proposer l’échange</button><button class="lnk" id="xtc">Fermer</button>`;
     o.querySelectorAll('[data-g]').forEach(e=>e.onclick=()=>{gs=gs===e.dataset.g?null:e.dataset.g;draw()});
     o.querySelectorAll('[data-w]').forEach(e=>e.onclick=()=>{ws=ws===e.dataset.w?null:e.dataset.w;draw()});
+    o.querySelectorAll('[data-d]').forEach(e=>e.onclick=()=>{if(e.disabled)return;dir=+e.dataset.d;draw()});
+    const ai=o.querySelector('#xamt');if(ai)ai.oninput=()=>{amt=Math.max(0,Math.min(99999,Math.trunc(+ai.value)||0));upd()};
     o.querySelector('#xtc').onclick=()=>o.remove();
-    o.querySelector('#xtp').onclick=async()=>{if(!(gs&&ws))return;const c=col[gs],wp=theirs.find(x=>x.i===ws);if(!c||c.count<2||!wp)return;
-      const off={id:Math.random().toString(36).slice(2,10),to:f.code,g:pk(c,1),w:wp,ts:Date.now()};
-      const mo=store.get('trd_o',[]).filter(x=>x.to!==f.code);mo.unshift(off);store.set('trd_o',mo.slice(0,5));
+    o.querySelector('#xtp').onclick=async()=>{const r=calc();if(!r.ok)return;const c=gs&&col[gs],wp=ws&&theirs.find(x=>x.i===ws);if(gs&&(!c||c.count<2))return;if(ws&&!wp)return;
+      const pb=r.pb;if(pb>0&&window.pbGet()<pb)return toast('Pas assez de Pokébidou');
+      const off={id:Math.random().toString(36).slice(2,10),to:f.code,g:c?pk(c,1):null,w:wp||null,ts:Date.now()};if(pb)off.pb=pb;
+      const old=store.get('trd_o',[]),mo=[off,...old.filter(x=>x.to!==f.code)];
+      [...old.filter(x=>x.to===f.code),...mo.slice(5)].forEach(x=>{const p=PBX(x);if(p>0&&window.pbAdd)window.pbAdd(p)});
+      if(pb>0)window.pbAdd(-pb);
+      store.set('trd_o',mo.slice(0,5));
       o.remove();toast('Proposition envoyée à '+f.n);try{window.xpush&&await window.xpush(true)}catch(e){}go('social')};
-    o.scrollTop=y};
+    upd();o.scrollTop=y};
   draw()}
 window.tradeUI=function(fr){try{
   const pfs=document.querySelectorAll('.xfl .pf');
@@ -2744,12 +2810,12 @@ window.tradeUI=function(fr){try{
   const h=[...$.querySelectorAll('h2')].find(e=>/^Mes amis/.test(e.textContent));if(!h||!fr.some(f=>f.code))return;
   const inc=incoming(fr),out=store.get('trd_o',[]),log=store.get('trd_log',[]);
   h.insertAdjacentHTML('beforebegin',`<h2>🔄 Échanges</h2>
-  ${inc.length?inc.map(({f,o},i)=>{const ok=col[o.w.i]&&col[o.w.i].count>1;return `<div class="trd"><b>${esc(f.n)} te propose un échange</b><div class="pair">${cardBox(o.g,'Tu reçois')}<span>⇄</span>${cardBox(o.w,'Tu donnes')}</div>${ok?'':'<small>Tu n’as plus ce doublon.</small>'}<div class="acts"><button class="cta" data-ta="${i}" ${ok?'':'disabled'}>Accepter</button><button class="lnk" data-td="${i}">Refuser</button></div></div>`}).join(''):'<p class="hint">Aucune proposition reçue. Appuie sur « Échanger » sous un ami pour en envoyer une.</p>'}
-  ${out.map((o,i)=>{const f=fr.find(x=>x.code===o.to);return `<div class="trd"><small>En attente de ${esc(f?f.n:'ton ami')}…</small><div class="pair">${cardBox(o.g,'Tu donnes')}<span>⇄</span>${cardBox(o.w,'Tu reçois')}</div><button class="lnk" data-tc="${i}">Annuler</button></div>`}).join('')}
+  ${inc.length?inc.map(({f,o},i)=>{const pb=PBX(o),have=!o.w||(col[o.w.i]&&col[o.w.i].count>1),ok=have&&!(pb<0&&window.pbGet&&window.pbGet()<-pb);return `<div class="trd"><b>${esc(f.n)} te propose un échange</b><div class="pair">${side(o.g,pb>0?pb:0,'Tu reçois')}<span>⇄</span>${side(o.w,pb<0?-pb:0,'Tu donnes')}</div>${o.g&&o.w&&pb?`<small>${pb>0?'+ '+nfr(pb)+' 🪙 pour toi':'+ '+nfr(-pb)+' 🪙 à ta charge'}</small>`:''}${ok?'':`<small>${have?'Il te manque '+nfr(-pb-window.pbGet())+' 🪙.':'Tu n’as plus ce doublon.'}</small>`}<div class="acts"><button class="cta" data-ta="${i}" ${ok?'':'disabled'}>Accepter</button><button class="lnk" data-td="${i}">Refuser</button></div></div>`}).join(''):'<p class="hint">Aucune proposition reçue. Appuie sur « Échanger » sous un ami pour en envoyer une.</p>'}
+  ${out.map((o,i)=>{const f=fr.find(x=>x.code===o.to),pb=PBX(o);return `<div class="trd"><small>En attente de ${esc(f?f.n:'ton ami')}…</small><div class="pair">${side(o.g,pb>0?pb:0,'Tu donnes')}<span>⇄</span>${side(o.w,pb<0?-pb:0,'Tu reçois')}</div>${o.g&&o.w&&pb?`<small>${pb>0?'+ '+nfr(pb)+' 🪙 de ta part (mis de côté)':'+ '+nfr(-pb)+' 🪙 pour toi'}</small>`:''}<button class="lnk" data-tc="${i}">Annuler</button></div>`}).join('')}
   ${log.length?`<p class="hint">Derniers échanges : ${log.slice(0,3).map(x=>`${esc(x.g)} ⇄ ${esc(x.w)} (${esc(x.f)})`).join(' · ')}</p>`:''}`);
   $.querySelectorAll('[data-ta]').forEach(b=>b.onclick=()=>{const x=inc[+b.dataset.ta];accept(x.f,x.o)});
   $.querySelectorAll('[data-td]').forEach(b=>b.onclick=()=>{const x=inc[+b.dataset.td];decline(x.f,x.o)});
-  $.querySelectorAll('[data-tc]').forEach(b=>b.onclick=()=>{const l=store.get('trd_o',[]);l.splice(+b.dataset.tc,1);store.set('trd_o',l);window.xpush&&window.xpush(true);go('social')});
+  $.querySelectorAll('[data-tc]').forEach(b=>b.onclick=()=>{const l=store.get('trd_o',[]),x=l.splice(+b.dataset.tc,1)[0];if(x){const p=PBX(x);if(p>0&&window.pbAdd)window.pbAdd(p)}store.set('trd_o',l);window.xpush&&window.xpush(true);go('social')});
 }catch(e){console.error('trade',e)}};
 }catch(e){console.error('features',e)}})();
 </script>
@@ -3040,6 +3106,15 @@ new MutationObserver(()=>{const n=sg();if(n!==sig){sig=n;try{sync()}catch(e){}}}
 size();sync();sig=sg();
 window.__xfx={sync,fx,get kind(){return kind},get running(){return!!raf},get n(){return P.length+stars.length+mc.length},get scale(){return scale},get ema(){return ema}};
 }catch(e){console.warn('xfx',e)}})();
+</script>
+<style>.pbi{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.22em;-webkit-user-drag:none;pointer-events:none}</style>
+<script>
+(function(){const U="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Cdefs%3E%3ClinearGradient id=%22gold%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23fff2a8%22/%3E%3Cstop offset=%22.45%22 stop-color=%22%23ffc83d%22/%3E%3Cstop offset=%221%22 stop-color=%22%23d98a00%22/%3E%3C/linearGradient%3E%3ClinearGradient id=%22gold2%22 x1=%221%22 y1=%220%22 x2=%220%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23ffe27a%22/%3E%3Cstop offset=%221%22 stop-color=%22%23e59a0a%22/%3E%3C/linearGradient%3E%3ClinearGradient id=%22red%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23ff5a5f%22/%3E%3Cstop offset=%221%22 stop-color=%22%23c8102e%22/%3E%3C/linearGradient%3E%3CradialGradient id=%22shine%22 cx=%22.3%22 cy=%22.25%22 r=%22.7%22%3E%3Cstop offset=%220%22 stop-color=%22%23fff%22 stop-opacity=%22.75%22/%3E%3Cstop offset=%221%22 stop-color=%22%23fff%22 stop-opacity=%220%22/%3E%3C/radialGradient%3E%3CclipPath id=%22in%22%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%22150%22/%3E%3C/clipPath%3E%3Cfilter id=%22sh%22 x=%22-20%25%22 y=%22-20%25%22 width=%22140%25%22 height=%22150%25%22%3E%3CfeDropShadow dx=%220%22 dy=%2212%22 stdDeviation=%2212%22 flood-color=%22%237a4a00%22 flood-opacity=%22.4%22/%3E%3C/filter%3E%3C/defs%3E%3Cg filter=%22url%28%23sh%29%22%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%22224%22 fill=%22url%28%23gold%29%22/%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%22224%22 fill=%22none%22 stroke=%22%23b86e00%22 stroke-width=%226%22/%3E%3Cg stroke=%22%23b86e00%22 stroke-width=%226%22 stroke-linecap=%22round%22 opacity=%22.55%22%3E%3Cpath id=%22t%22 d=%22M256 46v22%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%2815 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%2830 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%2845 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%2860 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%2875 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%2890 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28105 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28120 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28135 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28150 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28165 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28180 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28195 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28210 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28225 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28240 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28255 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28270 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28285 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28300 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28315 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28330 256 256%29%22/%3E%3Cuse href=%22%23t%22 transform=%22rotate%28345 256 256%29%22/%3E%3C/g%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%22178%22 fill=%22url%28%23gold2%29%22 stroke=%22%23fff3b8%22 stroke-width=%225%22/%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%22178%22 fill=%22none%22 stroke=%22%23b86e00%22 stroke-width=%223%22 opacity=%22.6%22 transform=%22scale%28.985%29 translate%284 4%29%22/%3E%3Cg clip-path=%22url%28%23in%29%22%3E%3Crect x=%2290%22 y=%2290%22 width=%22332%22 height=%22166%22 fill=%22url%28%23red%29%22/%3E%3Crect x=%2290%22 y=%22256%22 width=%22332%22 height=%22166%22 fill=%22%23fff8e6%22/%3E%3Crect x=%2290%22 y=%22238%22 width=%22332%22 height=%2236%22 fill=%22%233b2200%22/%3E%3C/g%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%22150%22 fill=%22none%22 stroke=%22%233b2200%22 stroke-width=%2212%22/%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%2252%22 fill=%22%233b2200%22/%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%2234%22 fill=%22%23fff8e6%22/%3E%3Ccircle cx=%22256%22 cy=%22256%22 r=%2216%22 fill=%22url%28%23gold%29%22 stroke=%22%23b86e00%22 stroke-width=%223%22/%3E%3Cellipse cx=%22190%22 cy=%22150%22 rx=%22120%22 ry=%2270%22 fill=%22url%28%23shine%29%22 transform=%22rotate%28-30 190 150%29%22/%3E%3C/g%3E%3Cpath d=%22M410 70l8 22 22 8-22 8-8 22-8-22-22-8 22-8z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M92 400l5 14 14 5-14 5-5 14-5-14-14-5 14-5z%22 fill=%22%23fff%22 opacity=%22.9%22/%3E%3C/svg%3E",E='\uD83E\uDE99';let q=0;
+function run(){q=0;try{const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.indexOf(E)<0||/^(SCRIPT|STYLE|TEXTAREA|OPTION)$/.test(n.parentNode.nodeName)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT}),l=[];
+while(w.nextNode())l.push(w.currentNode);
+l.forEach(n=>{const f=document.createDocumentFragment();n.nodeValue.split(E).forEach((t,i)=>{if(i){const m=new Image();m.className='pbi';m.alt='Pokébidou';m.src=U;f.appendChild(m)}if(t)f.appendChild(document.createTextNode(t))});n.replaceWith(f)})}catch(e){}}
+const go=()=>{if(!q)q=requestAnimationFrame(run)};
+new MutationObserver(go).observe(document.body,{childList:true,subtree:true,characterData:true});go()})();
 </script>
 </body>
 </html>
