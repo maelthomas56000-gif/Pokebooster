@@ -1854,6 +1854,21 @@ function pbBuy(c){const cost=pbCost(c),bal=pbd(),n=col[c.id]?col[c.id].count:0,o
     col[c.id]={id:c.id,setId:c.setId||pbS,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:(c.p??c.ph)??e?.price??null,count:(e?.count||0)+1};
     pbSave();o.remove();toast('🎉 '+c.name+' ajoutée à ta collection !');if(navigator.vibrate)navigator.vibrate(40);xPbSet()}}
 const _cPb=window.collection;window.collection=function(){_cPb.apply(this,arguments);$.insertAdjacentHTML('afterbegin','<button class="cta" id="xpb" style="margin:0 0 10px;width:100%">🪙 Boutique Pokébidou · '+pbN(pbd())+'</button>');const b=document.getElementById('xpb');if(b)b.onclick=()=>openX(xPb)};
+
+/* Achat / échange rapide depuis la fiche d'une carte */
+const _zPb=window.zoom;window.zoom=function(c){_zPb.apply(this,arguments);if(!c||!c.id)return;const d=document.body.lastElementChild;if(!d||!d.classList.contains('lb'))return;
+  const o=col[c.id],cost=pbCost(c),bal=pbd();
+  const box=document.createElement('div');box.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0';
+  if(!o){box.innerHTML=`<button class="cta" id="pbz" ${bal<cost?'disabled style="opacity:.5"':''}>🪙 Acheter pour ${pbN(cost)} Pokébidou${cost>1?'s':''}</button><small>Tu as 🪙 ${pbN(bal)}${bal<cost?' · il te manque '+pbN(cost-bal):''}</small>`;
+    d.appendChild(box);const b=box.querySelector('#pbz');
+    b.onclick=e=>{e.stopPropagation();if(pbd()<cost)return;pbSet(pbd()-cost);
+      col[c.id]={id:c.id,setId:c.setId||String(c.id).replace(/-[^-]+$/,''),name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:c.price??(c.p??c.ph)??null,count:1};
+      pbSave();d.remove();toast('🎉 '+c.name+' ajoutée ! −'+pbN(cost)+' 🪙');if(navigator.vibrate)navigator.vibrate(40);
+      const y=window.scrollY;try{render()}catch(_){}window.scrollTo(0,y)}}
+  else if(o.count>1){box.innerHTML=`<button class="chip" id="pbz">♻️ Échanger un doublon · +1 🪙</button><small>Tu as 🪙 ${pbN(bal)} · ×${o.count} en collection</small>`;
+    d.appendChild(box);box.querySelector('#pbz').onclick=e=>{e.stopPropagation();const q=col[c.id];if(!q||q.count<2)return;q.count--;pbSave();pbSet(pbd()+1);toast('+1 🪙');
+      const y=window.scrollY;d.remove();try{render()}catch(_){}window.scrollTo(0,y)}}
+};
 })();
 </script>
 <style>
