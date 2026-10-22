@@ -1496,11 +1496,9 @@ const av0=()=>store.get('av_v1','')||'';
 const mine=loc=>{const own=Object.values(col),top=own.reduce((a,c)=>(c.price||0)>((a&&a.price)||0)?c:a,null),a=av0(),ph=a.startsWith('data:')?a:'';
   const m={n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,ver:4,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:top?{n:top.name,p:top.price||0,u:cu(top,'high'),i:real(top.image)?top.image:null}:null,bt:store.get(BT,[]),a:ph?'':a,f:favs().slice(0,4).map(id=>col[id]).map(c=>({n:c.name,u:cu(c,'low'),i:real(c.image)?c.image:null})).filter(x=>x.u),d:Date.now()};
   return loc?{...m,L:top?img(top):null,ph}:m};
-let lastSig='',NETERR=null;window.xpush=f=>push(f);
-const errTxt=async r=>{let m='';try{m=((await r.json()).error||{}).message||''}catch(e){}return r.status===403?'Accès refusé par les règles Firestore (403) – voir les règles à coller dans Firebase':r.status===404?'Base Firestore introuvable (404) – la base n’est pas créée ou le projet est mauvais':r.status===400?'Requête refusée (400) '+m:r.status===429?'Quota Firebase dépassé (429)':'Erreur serveur '+r.status+' '+m};
-const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30)+(window.tradeDoc?JSON.stringify(window.tradeDoc()):'');if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>9000&&(m.f.length||m.bt.length>1)){if(m.f.length)m.f.pop();else m.bt.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};const td=window.tradeDoc?window.tradeDoc():null;if(td)fields.t={stringValue:JSON.stringify(td)};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});if(!r.ok){lastSig='';NETERR=await errTxt(r)}else NETERR=null;return r.ok}catch(e){lastSig='';NETERR='Pas de connexion internet';return false}};
-const hb=async()=>{if(!name()||NETERR)return;try{await fetch(`${BASE}/${myId()}?key=${FK}&updateMask.fieldPaths=hb`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{hb:{integerValue:String(Date.now())}}})})}catch(e){}};
-const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status===404?'ami introuvable':r.status===403?'accès refusé (règles Firebase)':'erreur '+r.status);const d=await r.json(),o=JSON.parse(d.fields.j.stringValue);{const u=Date.parse(d.updateTime||'');if(u)o.d=u}if(d.fields.p&&d.fields.p.stringValue)o.ph=d.fields.p.stringValue;o.tr=null;if(d.fields.t&&d.fields.t.stringValue){try{o.tr=JSON.parse(d.fields.t.stringValue)}catch(e){}}return o};
+let lastSig='';window.xpush=f=>push(f);
+const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30)+(window.tradeDoc?JSON.stringify(window.tradeDoc()):'');if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>9000&&(m.f.length||m.bt.length>1)){if(m.f.length)m.f.pop();else m.bt.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};const td=window.tradeDoc?window.tradeDoc():null;if(td)fields.t={stringValue:JSON.stringify(td)};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});return r.ok}catch(e){lastSig='';return false}};
+const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json(),o=JSON.parse(d.fields.j.stringValue);if(d.fields.p&&d.fields.p.stringValue)o.ph=d.fields.p.stringValue;o.tr=null;if(d.fields.t&&d.fields.t.stringValue){try{o.tr=JSON.parse(d.fields.t.stringValue)}catch(e){}}return o};
 const pAv=o=>o.ph||(o.a&&real(o.a)?o.a+'/low.webp':'');
 const okv=o=>!!(o.me||o.ver>=3);
 const avH=(o,s)=>{const u=pAv(o);return `<div class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s*.42)}px;${u?`background:#3a3470 url('${esc(u)}') 50% 18%/cover`:`background:linear-gradient(135deg,hsl(${hue(o.n)} 65% 55%),hsl(${(hue(o.n)+50)%360} 70% 45%));color:#fff`}">${u?'':esc((o.n[0]||'?').toUpperCase())}</div>`};
@@ -1519,23 +1517,18 @@ const ago=d=>{const s=Math.max(0,(Date.now()-d)/1000);if(s<90)return'en ligne';c
 const pres=(o,mini)=>{if(o.me)return'<span class="pres on"><i></i>en ligne</span>';if(!o.d)return'';const t=ago(o.d),c=t==='en ligne'?'on':(Date.now()-o.d<36e5?'rec':'');return`<span class="pres ${c}"><i></i>${t}</span>`};
 const rec=code=>bh().filter(h=>h.f===code&&!h.hide).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
 function resolve(l){
-  const me=myId(),mb=store.get(BT,[]),h=bh(),now=Date.now(),H24=864e5;let chg=0;
-  const openM=m=>m.to&&!m.r&&!m.p&&now-(m.t||0)<H24&&!h.some(x=>x.id===m.id);
-  l.forEach(f=>{f.pend=null;f.wait=null;if(!f.code)return;const fb=Array.isArray(f.bt)?f.bt:[];
-    fb.forEach(e=>{if(!e||e.to!==me||h.some(x=>x.id===e.id))return;
-      const m=mb.find(x=>x.id===e.id);
-      if(m){/* sa réponse à mon défi */
-        h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(m.c)>sc(e.c)?'W':sc(m.c)<sc(e.c)?'L':'N',m:m.c,o:e.c,t:now});return}
-      if(e.r)return;/* réponse à un défi que je n'ai plus : on l'ignore */
-      if(e.t&&now-e.t>=H24)return;/* défi périmé */
-      const o=mb.find(x=>x.to===f.code&&openM(x));
-      if(o){/* défis croisés : on les oppose directement */
-        h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(o.c)>sc(e.c)?'W':sc(o.c)<sc(e.c)?'L':'N',m:o.c,o:e.c,t:now});
-        h.unshift({id:o.id,f:f.code,fn:f.n,w:'X',m:o.c,o:e.c,t:now,hide:1});
-        o.p=1;chg=1}
-      else if(!f.pend)f.pend=e});
-    if(!f.pend)mb.forEach(m=>{if(!f.wait&&m.to===f.code&&openM(m)&&!fb.some(e=>e&&e.id===m.id))f.wait=m})});
-  if(chg)store.set(BT,mb);
+  const me=myId(),mb=store.get(BT,[]),h=bh();
+  l.forEach(f=>{f.pend=null;f.wait=null;if(!f.code||!f.bt)return;
+    f.bt.forEach(e=>{if(e.to!==me)return;const m=mb.find(x=>x.id===e.id);
+      if(m){if(!h.some(x=>x.id===e.id)){h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(m.c)>sc(e.c)?'W':sc(m.c)<sc(e.c)?'L':'N',m:m.c,o:e.c,t:Date.now()})}}
+      else if(!h.some(x=>x.id===e.id)){
+        const o=mb.find(x=>x.to===f.code&&!x.r&&!h.some(y=>y.id===x.id));
+        if(o){/* défis croisés : on les oppose directement */
+          h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(o.c)>sc(e.c)?'W':sc(o.c)<sc(e.c)?'L':'N',m:o.c,o:e.c,t:Date.now()});
+          h.unshift({id:o.id,f:f.code,fn:f.n,w:'X',m:o.c,o:e.c,t:Date.now(),hide:1});
+          o.r=1;store.set(BT,mb)}
+        else f.pend=e}});
+    mb.forEach(m=>{if(m.to===f.code&&!m.r&&Date.now()-(m.t||0)<864e5&&!h.some(x=>x.id===m.id)&&!f.bt.some(e=>e.id===m.id))f.wait=m})});
   h.length=Math.min(h.length,30);store.set(BH,h);
 }
 function fight(f,ch){
@@ -1569,7 +1562,6 @@ function paint(){
   ${card({...mine(true),me:1})}
   <button class="lnk" id="sav">🖼️ Changer ma photo de profil</button>
   <div style="text-align:center">${pres({me:1})}</div><p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne':''}</p>
-  ${NETERR?`<p class="hint" style="color:#ff7b7b">🔴 ${esc(NETERR)}</p>`:ok===true?`<p class="hint">🟢 Connecté au serveur</p>`:''}<button class="lnk" id="stest">🔧 Tester la connexion</button>
   <button class="cta" id="sc">Copier mon code</button>
   <button class="lnk" id="ss">Partager mon code</button>
   <h2>Ajouter un ami</h2>
@@ -1580,14 +1572,11 @@ function paint(){
   <p class="hint">Chacun ouvre un booster : le total de valeur le plus élevé gagne. Extension utilisée pour défier : <b>${esc(S0?S0.name:'—')}</b> (change-la dans Boosters).</p>
   ${h.length?h.slice(0,6).map(x=>`<div class="xlb" style="gap:8px;align-items:center"><span>${x.w==='W'?'✅':x.w==='L'?'❌':'🤝'}</span>${hc(x.m,'Toi')}${hc(x.o,esc(x.fn))}</div>`).join(''):'<p class="hint">Aucun combat pour l’instant.</p>'}
   <h2>Mes amis (${fr.length})</h2><div class="xfl">
-  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`${f.err?`<small style="color:#ff7b7b">⚠️ Synchro impossible : ${esc(f.err)}</small>`:''}${f.code?pres(f):`<small>Instantané du ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>`}${f.code&&!(f.ver>=3||f.v===3)?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':f.code&&!(f.ver>=3)?'<small>ℹ️ Ses stats exactes apparaîtront dès qu’il aura ouvert la nouvelle version</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small><button class="lnk" data-cancel="${i}">Annuler et relancer le défi</button>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
+  ${fr.length?fr.map((f,i)=>{const r=f.code?rec(f.code):null;return card(f,`${f.code?pres(f):`<small>Instantané du ${new Date(f.d||0).toLocaleDateString('fr-FR')}</small>`}${f.code&&!(f.ver>=3||f.v===3)?'<small>⚠️ Ton ami doit mettre le jeu à jour pour les combats</small>':f.code&&!(f.ver>=3)?'<small>ℹ️ Ses stats exactes apparaîtront dès qu’il aura ouvert la nouvelle version</small>':''}${r?`<small>Combats : ${r.W} V · ${r.L} D · ${r.N} É</small>${f.pend?`<button class="cta" data-resp="${i}">⚔️ Relever son défi</button>`:f.wait?'<small>⏳ En attente de sa réponse…</small><button class="lnk" data-cancel="${i}">Annuler et relancer le défi</button>':`<button class="cta" data-fight="${i}">⚔️ Défier</button>`}`:''}<button class="lnk" data-del="${i}">Retirer</button>`)}).join(''):'<p class="hint">Aucun ami pour l’instant.</p>'}</div></div>`;
   document.getElementById('sav').onclick=pickAv;
   const cam=document.getElementById('cam');if(cam){cam.onclick=pickAv;const a0=document.querySelector('.pf .av');if(a0){a0.style.cursor='pointer';a0.onclick=pickAv}}
   const $n=document.getElementById('sn');
   $n.onchange=async()=>{store.set(ME,{name:$n.value.trim()});await push();paint()};
-  document.getElementById('stest').onclick=async()=>{if(!name())return toast("Choisis d'abord un pseudo");toast('Test en cours…');
-    const w=await push(true);let rd='ok';try{await pull(myId())}catch(e){rd=String(e.message||e)}
-    ok=w;paint();toast(w&&rd==='ok'?'✅ Connexion OK (écriture + lecture)':w?'⚠️ Écriture OK, lecture KO : '+rd:'❌ '+(NETERR||'Écriture refusée'))};
   const share=async fn=>{if(!name())return toast("Choisis d'abord un pseudo");ok=await push();fn(myId())};
   document.getElementById('sc').onclick=()=>share(async c=>{try{await navigator.clipboard.writeText(c);toast('Code copié !')}catch(e){prompt('Copie ton code :',c)}});
   document.getElementById('ss').onclick=()=>share(c=>{const t='Mon code PokéBooster : '+c;if(navigator.share)navigator.share({text:t}).catch(()=>{});else prompt('Copie ton code :',c)});
@@ -1599,7 +1588,7 @@ function paint(){
       const l=store.get(FR,[]).filter(x=>code?x.code!==code:x.n!==o.n);l.unshift(o);store.set(FR,l);toast(o.n+' ajouté !');paint();
     }catch(e){toast('Code introuvable')}};
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=store.get(FR,[]);l.splice(+b.dataset.del,1);store.set(FR,l);paint()});
-  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{const f=fr[+b.dataset.cancel];if(f&&f.wait){store.set(BT,store.get(BT,[]).filter(x=>x.to!==f.code||x.r||x.p));f.wait=null;f.pend=null;toast('Défi annulé');store.set(FR,fr);lastSig='';push(true);paint()}});
+  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{const f=fr[+b.dataset.cancel];if(f&&f.wait){store.set(BT,store.get(BT,[]).filter(x=>x.to!==f.code||x.r));f.wait=null;f.pend=null;toast('Défi annulé');store.set(FR,fr);lastSig='';push(true);paint()}});
   document.querySelectorAll('[data-fight]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");fight(fr[+b.dataset.fight],null)});
   document.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");const f=fr[+b.dataset.resp];fight(f,f.pend)});
   window.tradeUI&&window.tradeUI(fr);
@@ -1786,15 +1775,15 @@ function badge(l){const n=l.filter(f=>f.pend).length+(window.tradeIn?window.trad
   if(n>lastP){const f=l.find(x=>x.pend);toast(f?'⚔️ '+f.n+' te défie !':'🔄 Nouvelle proposition d’échange !');if(navigator.vibrate)navigator.vibrate([80,60,80])}lastP=n}
 async function refresh(repaint,force){
   if(busyR)return;busyR=1;
-  try{ok=name()?await push(force):null;if(ok&&!force)hb();
+  try{ok=name()?await push(force):null;
     const l=store.get(FR,[]);
-    await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,{ph:''},o,{code:f.code,d:o.d||f.d||0});f.err=null}catch(e){f.err=String(e.message||e)}}));
+    await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,{ph:''},o,{code:f.code,d:o.d||Date.now()})}catch(e){}}));
     resolve(l);store.set(FR,l);if(window.tradeSync&&window.tradeSync(l))push(true);badge(l);
   }finally{busyR=0}
   if(repaint&&screen==='social'&&!document.querySelector('.xbt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT')&&sigP()!==lastPaint){const y=window.scrollY;paint();window.scrollTo(0,y)}
 }
 window.socialScreen=function(){paint();refresh(true,true)};
-setInterval(()=>{if(!document.hidden&&name())refresh(true,false)},30000);
+setInterval(()=>{if(!document.hidden&&name())refresh(true,true)},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh(true)});
 setTimeout(()=>refresh(false),2500);
 
@@ -1803,6 +1792,68 @@ const _rdW=window.render;window.render=function(){const r=_rdW.apply(this,argume
 setTimeout(updWal,0);
 new MutationObserver(()=>document.body.classList.toggle('ovx',!!document.querySelector('.lb,.xbt,.ovl'))).observe(document.body,{childList:true});
 const _t=window.tearOpen;if(_t)window.tearOpen=function(){if(navigator.vibrate)navigator.vibrate(35);return _t.apply(this,arguments)};
+
+/* ===== Pokébidou : monnaie du jeu ===== */
+const PBK='pbd_v1',PBT={E:2,C:4,U:8,R:20,RH:60,UR:200,SR:400};
+const pbd=()=>{const v=+store.get(PBK,0);return v>0?Math.floor(v):0};
+const pbSet=v=>{store.set(PBK,Math.max(0,Math.floor(v)));pbPill()};
+const pbCost=c=>{const v=Math.max(0,+(c.price??c.p??c.ph??0))||0;return Math.min(30000,Math.max(1,Math.round((PBT[c.tier]??4)+12*Math.pow(v,.9))))};
+const pbN=n=>n.toLocaleString('fr-FR');
+const pn=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+document.head.insertAdjacentHTML('beforeend','<style>#pbp{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;z-index:35;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:22px;background:var(--pan2,#fff);color:var(--ink,#222);border:1px solid var(--bd,#0002);box-shadow:0 4px 14px var(--sh,#0003);font-size:15px;cursor:pointer}#pbp b{font-weight:900}#pbp small{font-size:11px;opacity:.7}body.ovx #pbp{display:none!important}.pbbal{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:6px 16px 12px;padding:14px;border-radius:22px;background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2a00;font-weight:900;box-shadow:0 8px 22px #ff9f4355}.pbbal span{font-size:30px}.pbbal b{font-size:42px;line-height:1}.pbbal small{font-size:15px;font-weight:800}.pbg2{position:relative}.pbq{position:absolute;top:4px;left:4px;background:#000b;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;font-weight:800}.pbv{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:#ffd166;color:#3a2a00;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:900;white-space:nowrap}.pbt{margin:10px 16px;font-size:13px;opacity:.85;text-align:center;line-height:1.5}.pbcost{font-size:34px;font-weight:900;color:#ffd166}.pbrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}</style>');
+function pbPill(){let p=document.getElementById('pbp');if(!p){p=document.createElement('div');p.id='pbp';p.onclick=()=>openX(xPb);document.body.appendChild(p)}
+  p.innerHTML=`<span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou</small>`;p.style.display=screen==='reveal'?'none':'flex'}
+const _rdPb=window.render;window.render=function(){const r=_rdPb.apply(this,arguments);pbPill();return r};
+setTimeout(pbPill,0);
+const pbHead=t=>`<h1>${t}</h1><div class="pbbal"><span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou${pbd()>1?'s':''}</small></div>`;
+const pbSave=()=>{store.set(KEY,col)};
+function xPb(){const all=Object.values(col),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0);
+  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">1 carte échangée = 1 🪙 Pokébidou. Dépense-les pour acheter n’importe quelle carte : plus elle est rare, plus elle coûte cher.</p>
+  <button class="cta" id="pbs">♻️ Échanger mes cartes<br><small>${dbl} doublon${dbl>1?'s':''} · ${all.length} carte${all.length>1?'s':''} différente${all.length>1?'s':''}</small></button>
+  <button class="cta" id="pbb">🛒 Acheter des cartes</button>
+  <div class="pbt"><b>Tarifs (dès)</b><br>Énergie 2 · Commune 4 · Peu commune 8 · Rare 20<br>Holo 60 · Ultra rare 200 · Secrète 400<br>+ un gros supplément selon la valeur réelle : une carte à 150 € coûte ≈ 1 500 🪙, une carte à plusieurs milliers d’euros, des dizaines de milliers</div>
+  <div class="grow"></div><button class="lnk" onclick="go('collection')">Retour</button>`;
+  document.getElementById('pbs').onclick=()=>openX(xPbSell);document.getElementById('pbb').onclick=()=>{pbq='';openX(xPbShop)}}
+let pbF='dup';
+function xPbSell(){const all=Object.values(col).sort((a,b)=>b.count-a.count||String(a.name).localeCompare(b.name)),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0),list=pbF==='dup'?all.filter(c=>c.count>1):all;
+  $.innerHTML=`${pbHead('♻️ Échanger')}<button class="cta" id="pba" ${dbl?'':'disabled style="opacity:.45"'}>Échanger tous mes doublons · +${dbl} 🪙</button>
+  <div class="pbrow"><button class="chip ${pbF==='dup'?'on':''}" data-f="dup">Doublons</button><button class="chip ${pbF==='all'?'on':''}" data-f="all">Toutes mes cartes</button></div>
+  <p class="hint">Touche une carte pour en échanger 1 exemplaire (+1 🪙).</p>
+  <div class="grid" id="pbgr">${list.length?list.map(c=>`<div class="g pbg2" data-id="${esc(c.id)}" style="--i:0;--tc:${tc(c)}"><img src="${img(c,'low')}" alt="" loading="lazy"><span class="pbq">×${c.count}</span><span class="pbv">+1 🪙</span></div>`).join(''):'<p class="empty">Aucun doublon à échanger pour l’instant.</p>'}</div>
+  <div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
+  document.getElementById('bk').onclick=()=>openX(xPb);
+  document.querySelectorAll('.pbrow [data-f]').forEach(b=>b.onclick=()=>{pbF=b.dataset.f;xPbSell()});
+  document.getElementById('pba').onclick=()=>{if(!dbl)return;if(!confirm('Échanger '+dbl+' doublon'+(dbl>1?'s':'')+' contre '+dbl+' 🪙 ?'))return;all.forEach(c=>{if(c.count>1)c.count=1});pbSave();pbSet(pbd()+dbl);toast('+'+dbl+' 🪙');xPbSell()};
+  document.getElementById('pbgr').onclick=e=>{const t=e.target.closest('.g');if(!t)return;const c=col[t.dataset.id];if(!c)return;
+    if(c.count<2&&!confirm('Échanger ta dernière carte « '+c.name+' » contre 1 🪙 ?'))return;
+    c.count--;if(c.count<1)delete col[c.id];pbSave();pbSet(pbd()+1);toast('+1 🪙');const y=window.scrollY;xPbSell();window.scrollTo(0,y)}}
+let pbq='',pbS=null,pbM=1;
+function xPbShop(){const rows=()=>sets.filter(s=>!HID.has(s.id)&&(!pbq||pn(s.name).includes(pn(pbq)))).map(s=>`<div class="xlb" data-s="${esc(s.id)}" style="cursor:pointer;margin:4px 0"><span>${esc(s.name)}</span><b>›</b></div>`).join('')||'<p class="empty">Aucune extension.</p>';
+  $.innerHTML=`${pbHead('🛒 Acheter')}<p class="hint">Choisis une extension.</p><input id="pbqi" placeholder="Chercher une extension" value="${esc(pbq)}" style="width:calc(100% - 32px);margin:0 16px 8px"><div id="pbl">${rows()}</div><div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
+  const bind=()=>document.querySelectorAll('#pbl [data-s]').forEach(e=>e.onclick=()=>{pbS=e.dataset.s;pbM=1;openX(xPbSet)});bind();
+  document.getElementById('pbqi').oninput=e=>{pbq=e.target.value;document.getElementById('pbl').innerHTML=rows();bind()};
+  document.getElementById('bk').onclick=()=>openX(xPb)}
+async function xPbSet(){const S=sets.find(x=>x.id===pbS)||{name:''};
+  $.innerHTML=`${pbHead('🛒 '+esc(S.name))}<p class="hint">Chargement des cartes… <b id="prog"></b></p><div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
+  document.getElementById('bk').onclick=()=>openX(xPbShop);
+  let cards;try{cards=await(pre[pbS]||(pre[pbS]=loadSet(pbS)))}catch(e){delete pre[pbS];if(XS===xPbSet)$.innerHTML=`${pbHead('🛒 '+esc(S.name))}<p class="empty">Impossible de charger les cartes (connexion ?).</p><button class="cta" id="rt">Réessayer</button><button class="lnk" id="bk">Retour</button>`,document.getElementById('rt').onclick=()=>openX(xPbSet),document.getElementById('bk').onclick=()=>openX(xPbShop);return}
+  if(screen!=='xcustom'||XS!==xPbSet)return;
+  const own=c=>col[c.id]?col[c.id].count:0,miss=cards.filter(c=>!own(c)).length,list=pbM?cards.filter(c=>!own(c)):cards;
+  $.innerHTML=`${pbHead('🛒 '+esc(S.name))}<div class="pbrow"><button class="chip ${pbM?'on':''}" data-m="1">Manquantes (${miss})</button><button class="chip ${pbM?'':'on'}" data-m="0">Toutes (${cards.length})</button></div>
+  <p class="hint">Touche une carte pour l’acheter.</p>
+  <div class="grid" id="pbgr">${list.length?list.map((c,i)=>`<div class="g pbg2" data-i="${cards.indexOf(c)}" style="--i:0;--tc:${tc(c)};${own(c)?'opacity:.6':''}"><img src="${img(c,'low')}" alt="" loading="lazy"><span class="pbv">🪙 ${pbN(pbCost(c))}</span>${own(c)?`<span class="pbq">✓ ×${own(c)}</span>`:''}</div>`).join(''):'<p class="empty">Tu as toutes les cartes de cette extension 🎉</p>'}</div>
+  <div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
+  document.getElementById('bk').onclick=()=>openX(xPbShop);
+  document.querySelectorAll('.pbrow [data-m]').forEach(b=>b.onclick=()=>{pbM=+b.dataset.m;xPbSet()});
+  document.getElementById('pbgr').onclick=e=>{const t=e.target.closest('.g');if(!t)return;const c=cards[+t.dataset.i];if(c)pbBuy(c,cards)}}
+function pbBuy(c){const cost=pbCost(c),bal=pbd(),n=col[c.id]?col[c.id].count:0,o=document.createElement('div');o.className='xbt';
+  o.innerHTML=`<button class="x" id="pbx">✕</button><img src="${img(c,'high')}" alt="" style="width:min(68vw,320px);border-radius:14px"><b>${esc(c.name)}</b><span class="bd">${esc(label(c))}</span><div class="pbcost">🪙 ${pbN(cost)}</div><small>Tu as 🪙 ${pbN(bal)}${n?' · déjà ×'+n+' dans ta collection':' · pas encore dans ta collection'}</small>
+  <button class="cta" id="pby" ${bal<cost?'disabled style="opacity:.45"':''}>Acheter pour ${pbN(cost)} 🪙</button>${bal<cost?`<small>Il te manque ${pbN(cost-bal)} 🪙 : échange des doublons !</small>`:''}`;
+  document.body.appendChild(o);o.querySelector('#pbx').onclick=()=>o.remove();
+  o.querySelector('#pby').onclick=()=>{if(pbd()<cost)return;const e=col[c.id];pbSet(pbd()-cost);
+    col[c.id]={id:c.id,setId:c.setId||pbS,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:(c.p??c.ph)??e?.price??null,count:(e?.count||0)+1};
+    pbSave();o.remove();toast('🎉 '+c.name+' ajoutée à ta collection !');if(navigator.vibrate)navigator.vibrate(40);xPbSet()}}
+const _cPb=window.collection;window.collection=function(){_cPb.apply(this,arguments);$.insertAdjacentHTML('afterbegin','<button class="cta" id="xpb" style="margin:0 0 10px;width:100%">🪙 Boutique Pokébidou · '+pbN(pbd())+'</button>');const b=document.getElementById('xpb');if(b)b.onclick=()=>openX(xPb)};
 })();
 </script>
 <style>
