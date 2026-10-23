@@ -1677,7 +1677,7 @@ async function enrichCard(c,sid){
   return {...c,setId:sid,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,kc,p??ph),p,ph}}
 window.zoomAny=async id=>{const sid=viewId,c=cardsOf(B[sid],sid).find(x=>x.id===id);if(!c)return;
   let e;try{e=await enrichCard(c,sid)}catch(_){e={...c,setId:sid,tier:c.ni?'SR':'C'}}zoom(e)};
-let MULT=0,MSUM=0,MTOT=0,MLAST=null;
+let MULT=0,MSUM=0,MTOT=0,MLAST=null;window.__mt=()=>MTOT;
 const WK='wal_v1',wal=()=>store.get(WK,0),setWal=v=>{store.set(WK,Math.round(v*100)/100);updWal()};
 const _fs=window.focusScreen;window.focusScreen=function(){_fs();if(BATTLE||(TY&&!MULT))return;const w=$.querySelector('.swh');if(!w)return;
   w.insertAdjacentHTML('beforebegin',MULT>0?`<div class="hint">${TY&&tyc.etb>0?'📦 ETB':'Série en cours'} : ${MTOT-MULT+1}/${MTOT}</div>`:'');
@@ -2830,7 +2830,7 @@ const _st=window.statsScreen;window.statsScreen=function(){_st.apply(this,argume
 
 /* ---------- Raccourci : ouvrir plusieurs boosters depuis le résultat ---------- */
 const _rs2=window.results;window.results=function(){_rs2.apply(this,arguments);
-  if(TY||BATTLE||MTOT||!window.mbxQuick)return;
+  if(TY||BATTLE||(window.__mt&&window.__mt())||!window.mbxQuick)return;
   const b=[...$.querySelectorAll('.cta')].find(x=>/Rouvrir/.test(x.textContent));if(!b)return;
   b.insertAdjacentHTML('beforebegin','<div id="xq" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:4px 0 8px"><small>Rouvrir d’un coup :</small>'+[3,5,10,20].map(n=>`<button class="chip" data-q="${n}">×${n}</button>`).join('')+'</div>');
   $.querySelectorAll('#xq [data-q]').forEach(e=>e.onclick=()=>window.mbxQuick(+e.dataset.q))};
