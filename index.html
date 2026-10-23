@@ -633,7 +633,9 @@ const ERAS=[['all','Tous'],['fam','🐾 Mystère'],['me','Méga'],['sv','EV'],['
 const eraOf=s=>{const i=s.id||'';return i==='fam'?'fam':isMcd(s)?'mcd':/^me/i.test(i)?'me':/^sv/i.test(i)?'sv':/^(swsh|cel25|pgo)/i.test(i)?'swsh':/^sm/i.test(i)?'sm':/^(xy|g1|dc1)/i.test(i)?'xy':/^(bw|dv1)/i.test(i)?'bw':/^(hgss|col)/i.test(i)?'hgss':/^(dp|pl)\d/i.test(i)?'dp':/^ex\d/i.test(i)?'ex':/^ecard/i.test(i)?'ecard':/^(base\d|gym|neo|lc$|si1)/i.test(i)?'cl':'misc'};
 let era='all';const vis=()=>sets.filter(s=>era==='all'||eraOf(s)===era);
 const packSize=s=>{const i=s.id||'';return i==='fam'?2:is30(s)?6:isMcd(s)?2:/^(tk|jumbo)/i.test(i)?5:/^dv1$/i.test(i)?5:/^dc1$/i.test(i)?7:/^det1$/i.test(i)?4:/^pop[789]$/i.test(i)?3:/^pop/i.test(i)?2:/^[a-z]+p$|^np$/i.test(i)?3:/^(base|gym|neo|lc|si1)/i.test(i)?11:/^(ecard|ex\d)/i.test(i)?9:/^cel/i.test(i)?4:10};
-const lk=()=>{const M=cfg.luck;return[Math.min(4*M,20),Math.min(14*M,55),Math.min(40*M,90)]};
+const lk=()=>{const M=cfg.luck;return[Math.min(1.5*M,15),Math.min(8.5*M,55),Math.min(30.5*M,90)]};
+/* Taux réalistes de la case « rare » : secrète 1,5 % · ultra 7 % · holo 22 % · rare 69,5 %. Dans une même rareté, plus la carte vaut cher, plus elle est dure à sortir. */
+const wr=a=>{const t=a[0]&&a[0].tier;if(a.length<2||(t!=='SR'&&t!=='UR')||a.some(x=>x.tier!==t))return rnd(a);const w=a.map(x=>1/(1+Math.max(+x.p||0,+x.ph||0)/(t==='SR'?8:15)));let r=Math.random()*w.reduce((q,v)=>q+v,0),i=0;for(;i<a.length-1;i++){r-=w[i];if(r<=0)break}return a[i]};
 const applyTheme=()=>{document.documentElement.dataset.theme=cfg.theme;const m=document.querySelector('meta[name=theme-color]');if(m)m.content=cfg.theme==='dark'?'#0d0a26':'#f4f1ff'};applyTheme();
 
 
@@ -751,9 +753,9 @@ function drawNorm(cards,n=10,pika=false,vint=false){
   const ALL=cards,PKU=c=>/pikachu/i.test(c.name),rgb=cards.filter(c=>c.ni&&!c.rp),rpl=cards.filter(c=>c.rp&&!(pika&&PKU(c))),pks=pika?cards.filter(c=>!c.ni&&!c.rp&&PKU(c)):[]; cards=cards.filter(c=>!c.ni&&!c.rp&&!(pika&&PKU(c)));
   const P={}; Object.keys(T).forEach(t=>P[t]=cards.filter(c=>c.tier===t));
   const used=new Set();
-  const one=(...ls)=>{for(const l of ls){let a=l.filter(c=>!used.has(c.id));if(cfg.miss&&Math.random()*100<missP()){const m=a.filter(c=>!col[c.id]);if(m.length)a=m}if(a.length){const c=rnd(a);used.add(c.id);return c}}return null};
+  const one=(...ls)=>{for(const l of ls){let a=l.filter(c=>!used.has(c.id));if(cfg.miss&&Math.random()*100<missP()){const m=a.filter(c=>!col[c.id]);if(m.length)a=m}if(a.length){const c=wr(a);used.add(c.id);return c}}return null};
   const M=cfg.luck,[a,b,c2]=lk(),order=['SR','UR','RH','R'];
-  const hit=()=>{if(rgb.length&&Math.random()<.004*M){const x=one(rgb);if(x)return x}const r=Math.random()*100,st=r<a?0:r<b?1:r<c2?2:3;return one(...order.slice(st).map(t=>P[t]),...order.slice(0,st).reverse().map(t=>P[t]),P.U,cards)};
+  const hit=()=>{if(rgb.length&&Math.random()<.0012*M){const x=one(rgb);if(x)return x}const r=Math.random()*100,st=r<a?0:r<b?1:r<c2?2:3;return one(...order.slice(st).map(t=>P[t]),...order.slice(0,st).reverse().map(t=>P[t]),P.U,cards)};
   const out=[],big=n>=8,hasE=P.E.length>0&&(big||pika),rvN=big&&!vint?1:0,ex=n>=5&&Math.random()<Math.min(.6,(M-1)*.1)?1:0;
   const un=big?3:Math.max(1,Math.round((n-1)*.35));
   const co=Math.max(0,n-1-rvN-ex-un-(hasE?1:0)-(pika?1:0));
