@@ -1866,7 +1866,7 @@ setTimeout(pbPill,0);
 const pbHead=t=>`<h1>${t}</h1><div class="pbbal"><span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou${pbd()>1?'s':''}</small></div>`;
 const pbSave=()=>{store.set(KEY,col)};
 function xPb(){const all=Object.values(col),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0);
-  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">Échange tes doublons contre des 🪙 Pokébidou : chaque carte rapporte de 1 à 10 🪙 selon sa rareté (ex : 5 🪙, plus grosses rares : 10 🪙 · doublons Mystère : 25 🪙). Dépense-les pour acheter n’importe quelle carte.</p>
+  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">Échange tes doublons contre des 🪙 Pokébidou : chaque carte rapporte de 1 à 10 🪙 selon sa rareté (ex : 5 🪙, plus grosses rares : 10 🪙 · doublons Mystère : 25 🪙). Dépense-les pour racheter des exemplaires de cartes que tu possèdes déjà (les cartes manquantes ne s’achètent plus).</p>
   ${pbDailyHTML()}<button class="cta" id="pbs">♻️ Échanger mes cartes<br><small>${dbl} doublon${dbl>1?'s':''} · ${all.length} carte${all.length>1?'s':''} différente${all.length>1?'s':''}</small></button>
   <button class="cta" id="pbb">🛒 Acheter des cartes</button>
   <button class="cta" id="pbc">🎨 Cosmétiques · cadres &amp; fonds</button>
@@ -1897,15 +1897,13 @@ async function xPbSet(){const S=sets.find(x=>x.id===pbS)||{name:''};
   document.getElementById('bk').onclick=()=>openX(xPbShop);
   let cards;try{cards=await(pre[pbS]||(pre[pbS]=loadSet(pbS)))}catch(e){delete pre[pbS];if(XS===xPbSet)$.innerHTML=`${pbHead('🛒 '+esc(S.name))}<p class="empty">Impossible de charger les cartes (connexion ?).</p><button class="cta" id="rt">Réessayer</button><button class="lnk" id="bk">Retour</button>`,document.getElementById('rt').onclick=()=>openX(xPbSet),document.getElementById('bk').onclick=()=>openX(xPbShop);return}
   if(screen!=='xcustom'||XS!==xPbSet)return;
-  const own=c=>col[c.id]?col[c.id].count:0,miss=cards.filter(c=>!own(c)).length,list=pbM?cards.filter(c=>!own(c)):cards;
-  $.innerHTML=`${pbHead('🛒 '+esc(S.name))}<div class="pbrow"><button class="chip ${pbM?'on':''}" data-m="1">Manquantes (${miss})</button><button class="chip ${pbM?'':'on'}" data-m="0">Toutes (${cards.length})</button></div>
-  <p class="hint">Touche une carte pour l’acheter.</p>
-  <div class="grid" id="pbgr">${list.length?list.map((c,i)=>`<div class="g pbg2" data-i="${cards.indexOf(c)}" style="--i:0;--tc:${tc(c)};${own(c)?'opacity:.6':''}"><img src="${img(c,'low')}" alt="" loading="lazy"><span class="pbv">🪙 ${pbN(pbCost(c))}</span>${own(c)?`<span class="pbq">✓ ×${own(c)}</span>`:''}</div>`).join(''):'<p class="empty">Tu as toutes les cartes de cette extension 🎉</p>'}</div>
+  const own=c=>col[c.id]?col[c.id].count:0,miss=cards.filter(c=>!own(c)).length,list=cards.filter(c=>own(c));
+  $.innerHTML=`${pbHead('🛒 '+esc(S.name))}<p class="hint">Les cartes manquantes ne peuvent plus s’acheter. Touche une carte que tu possèdes pour en racheter un exemplaire.</p>
+  <div class="grid" id="pbgr">${list.length?list.map((c,i)=>`<div class="g pbg2" data-i="${cards.indexOf(c)}" style="--i:0;--tc:${tc(c)};${own(c)?'opacity:.6':''}"><img src="${img(c,'low')}" alt="" loading="lazy"><span class="pbv">🪙 ${pbN(pbCost(c))}</span>${own(c)?`<span class="pbq">✓ ×${own(c)}</span>`:''}</div>`).join(''):'<p class="empty">Tu ne possèdes encore aucune carte de cette extension : ouvre des boosters pour en obtenir !</p>'}</div>
   <div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
   document.getElementById('bk').onclick=()=>openX(xPbShop);
-  document.querySelectorAll('.pbrow [data-m]').forEach(b=>b.onclick=()=>{pbM=+b.dataset.m;xPbSet()});
-  document.getElementById('pbgr').onclick=e=>{const t=e.target.closest('.g');if(!t)return;const c=cards[+t.dataset.i];if(c)pbBuy(c,cards)}}
-function pbBuy(c){const cost=pbCost(c),bal=pbd(),n=col[c.id]?col[c.id].count:0,o=document.createElement('div');o.className='xbt';
+    document.getElementById('pbgr').onclick=e=>{const t=e.target.closest('.g');if(!t)return;const c=cards[+t.dataset.i];if(c)pbBuy(c,cards)}}
+function pbBuy(c){if(!(col[c.id]&&col[c.id].count>0)){toast('Carte manquante : impossible de l’acheter, ouvre des boosters pour l’obtenir !');return}const cost=pbCost(c),bal=pbd(),n=col[c.id]?col[c.id].count:0,o=document.createElement('div');o.className='xbt';
   o.innerHTML=`<button class="x" id="pbx">✕</button><img src="${img(c,'high')}" alt="" style="width:min(68vw,320px);border-radius:14px"><b>${esc(c.name)}</b><span class="bd">${esc(label(c))}</span><div class="pbcost">🪙 ${pbN(cost)}</div><small>Tu as 🪙 ${pbN(bal)}${n?' · déjà ×'+n+' dans ta collection':' · pas encore dans ta collection'}</small>
   <button class="cta" id="pby" ${bal<cost?'disabled style="opacity:.45"':''}>Acheter pour ${pbN(cost)} 🪙</button>${bal<cost?`<small>Il te manque ${pbN(cost-bal)} 🪙 : échange des doublons !</small>`:''}`;
   document.body.appendChild(o);o.querySelector('#pbx').onclick=()=>o.remove();
@@ -1949,7 +1947,7 @@ const _cPb=window.collection;window.collection=function(){_cPb.apply(this,argume
 const _zPb=window.zoom;window.zoom=function(c){_zPb.apply(this,arguments);if(!c||!c.id)return;const d=document.body.lastElementChild;if(!d||!d.classList.contains('lb'))return;
   const o=col[c.id],cost=pbCost(c),bal=pbd();
   const box=document.createElement('div');box.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0';
-  if(!o){box.innerHTML=`<button class="cta" id="pbz" ${bal<cost?'disabled style="opacity:.5"':''}>🪙 Acheter pour ${pbN(cost)} Pokébidou${cost>1?'s':''}</button><small>Tu as 🪙 ${pbN(bal)}${bal<cost?' · il te manque '+pbN(cost-bal):''}</small>`;
+  if(false){box.innerHTML=`<button class="cta" id="pbz" ${bal<cost?'disabled style="opacity:.5"':''}>🪙 Acheter pour ${pbN(cost)} Pokébidou${cost>1?'s':''}</button><small>Tu as 🪙 ${pbN(bal)}${bal<cost?' · il te manque '+pbN(cost-bal):''}</small>`;
     d.appendChild(box);const b=box.querySelector('#pbz');
     b.onclick=e=>{e.stopPropagation();if(pbd()<cost)return;pbSet(pbd()-cost);
       col[c.id]={id:c.id,setId:c.setId||String(c.id).replace(/-[^-]+$/,''),name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,fam:c.fam,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:c.price??(c.p??c.ph)??null,count:1};
@@ -3202,6 +3200,19 @@ new MutationObserver(()=>{const n=sg();if(n!==sig){sig=n;try{sync()}catch(e){}}}
 size();sync();sig=sg();
 window.__xfx={sync,fx,get kind(){return kind},get running(){return!!raf},get n(){return P.length+stars.length+mc.length},get scale(){return scale},get ema(){return ema}};
 }catch(e){console.warn('xfx',e)}})();
+</script>
+<style>.rsbar{position:sticky;bottom:calc(96px + env(safe-area-inset-bottom));z-index:20;display:flex;flex-direction:column;padding:26px 0 2px;margin-top:6px;background:linear-gradient(to bottom,transparent,var(--bg,#0b0920) 28px);pointer-events:none}.rsbar>*{pointer-events:auto}.rsbar .cta{margin-top:0}.rsbar .lnk{padding:8px 14px}</style>
+<script>
+/* Boutons "Rouvrir" / "Choisir un autre booster" toujours visibles (collants au-dessus de la barre de navigation) */
+(function(){const prev=window.results;if(typeof prev!=='function')return;
+window.results=function(){const r=prev.apply(this,arguments);
+try{const app=document.getElementById('app');if(!app||document.getElementById('rsbar'))return r;
+const g=app.querySelector(':scope > .grow');if(!g)return r;
+const items=[];let n=g.nextElementSibling;while(n){items.push(n);n=n.nextElementSibling}
+if(!items.length)return r;
+const bar=document.createElement('div');bar.className='rsbar';bar.id='rsbar';
+g.after(bar);items.forEach(e=>bar.appendChild(e));}catch(e){console.warn('rsbar',e)}
+return r};})();
 </script>
 <style>.pbi{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.22em;-webkit-user-drag:none;pointer-events:none}</style>
 <script>
