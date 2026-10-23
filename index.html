@@ -1936,14 +1936,11 @@ function pbGoals(){try{const d=store.get(PBGK,[]),nw=PBG.filter(g=>!d.includes(g
   store.set(PBGK,d.concat(nw.map(g=>g[0])));const gain=nw.reduce((x,g)=>x+g[2],0);pbSet(pbd()+gain);
   toast('🎯 '+(nw.length>1?nw.length+' objectifs atteints':'Objectif : '+nw[0][1])+' · +'+pbN(gain)+' 🪙');
   if(navigator.vibrate)navigator.vibrate([40,40,80])}catch(e){}}
-window.pbPack=function(pk){try{let g=0,n=0,fp=0;const seen={};
-  pk.forEach(c=>{const h=(col[c.id]?col[c.id].count:0)+(seen[c.id]||0);seen[c.id]=(seen[c.id]||0)+1;if(h>0&&PBP[c.tier]){g+=PBP[c.tier];n++}});
-  const td=pbDay(0);if(store.get('pb_fp','')!==td){store.set('pb_fp',td);g+=PB_FP;fp=1}
-  if(g>0){pbSet(pbd()+g);toast([fp?'🎴 1er booster du jour +'+PB_FP:'',n?'♻️ '+n+' doublon'+(n>1?'s':'')+' rare'+(n>1?'s':'')+' +'+(g-(fp?PB_FP:0)):''].filter(Boolean).join(' · ')+' 🪙')}}catch(e){}};
+window.pbPack=function(pk){try{const td=pbDay(0);if(store.get('pb_fp','')!==td){store.set('pb_fp',td);pbSet(pbd()+PB_FP)}}catch(e){}};
 function pbGoalsHTML(){const d=store.get(PBGK,[]),r=(t,s,g)=>`<div class="row"><div class="t"><b>${t}</b>${s?`<small>${s}</small>`:''}</div><em>${g}</em></div>`;
   return '<h2>🎯 Comment gagner des 🪙</h2>'+PBG.map(g=>r((d.includes(g[0])?'✅ ':'🔒 ')+g[1],'','+'+g[2]+' 🪙')).join('')
   +r('🏆 Extension complétée','Une seule fois par extension','+'+PB_SET+' 🪙')
-  +r('♻️ Doublon rare tiré en booster','Rare 3 · Holo 8 · Ultra rare 25 · Secrète 50','auto')
+  
   +r('🎴 1er booster du jour','','+'+PB_FP+' 🪙')+r('🎁 Bonus du jour','Série de jours d’affilée','+5 à +33 🪙')}
 })();
 </script>
