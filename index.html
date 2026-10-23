@@ -1804,7 +1804,7 @@ const pbd=()=>{const v=+store.get(PBK,0);return v>0?Math.floor(v):0};
 const pbSet=v=>{store.set(PBK,Math.max(0,Math.floor(v)));pbPill()};
 const pbCost=c=>{if(c.fam)return 1000;const v=Math.max(0,+(c.price??c.p??c.ph??0))||0;return Math.min(30000,Math.max(1,Math.round((PBT[c.tier]??4)+12*Math.pow(v,.9))))};
 const pbN=n=>n.toLocaleString('fr-FR');
-const PB_SELL=.15;const pbSV=c=>Math.max(1,Math.round(pbCost(c)*PB_SELL));
+const pbSV=c=>({E:1,C:1,U:2,R:2,RH:3,UR:3,SR:3,F:3})[c.tier]||1;
 const pn=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 document.head.insertAdjacentHTML('beforeend','<style>#pbp{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;z-index:35;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:22px;background:var(--pan2,#fff);color:var(--ink,#222);border:1px solid var(--bd,#0002);box-shadow:0 4px 14px var(--sh,#0003);font-size:15px;cursor:pointer}#pbp b{font-weight:900}#pbp small{font-size:11px;opacity:.7}body.ovx #pbp{display:none!important}.pbbal{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:6px 16px 12px;padding:14px;border-radius:22px;background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2a00;font-weight:900;box-shadow:0 8px 22px #ff9f4355}.pbbal span{font-size:30px}.pbbal b{font-size:42px;line-height:1}.pbbal small{font-size:15px;font-weight:800}.pbg2{position:relative}.pbq{position:absolute;top:4px;left:4px;background:#000b;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;font-weight:800}.pbv{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:#ffd166;color:#3a2a00;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:900;white-space:nowrap}.pbt{margin:10px 16px;font-size:13px;opacity:.85;text-align:center;line-height:1.5}.pbcost{font-size:34px;font-weight:900;color:#ffd166}.pbrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}</style>');
 function pbPill(){let p=document.getElementById('pbp');if(!p){p=document.createElement('div');p.id='pbp';p.onclick=()=>openX(xPb);document.body.appendChild(p)}
@@ -1814,7 +1814,7 @@ setTimeout(pbPill,0);
 const pbHead=t=>`<h1>${t}</h1><div class="pbbal"><span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou${pbd()>1?'s':''}</small></div>`;
 const pbSave=()=>{store.set(KEY,col)};
 function xPb(){const all=Object.values(col),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0);
-  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">Échange tes doublons contre des 🪙 Pokébidou : plus la carte est rare, plus elle rapporte (environ 15 % de son prix en boutique). Dépense-les pour acheter n’importe quelle carte.</p>
+  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">Échange tes doublons contre des 🪙 Pokébidou : chaque carte rapporte de 1 à 3 🪙 selon sa rareté. Dépense-les pour acheter n’importe quelle carte.</p>
   ${pbDailyHTML()}<button class="cta" id="pbs">♻️ Échanger mes cartes<br><small>${dbl} doublon${dbl>1?'s':''} · ${all.length} carte${all.length>1?'s':''} différente${all.length>1?'s':''}</small></button>
   <button class="cta" id="pbb">🛒 Acheter des cartes</button>
   <button class="cta" id="pbf" style="background:linear-gradient(135deg,#ff9ec9,#ff7eb6);color:#3a0f24">🐾 Boutique Famille<br><small>${FAM.length} cartes spéciales · 1 000 🪙 pièce</small></button>
