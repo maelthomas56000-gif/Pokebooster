@@ -803,13 +803,21 @@ function premDraw(cards,S0,id){
 function premInit(){
   PREM={luck:0,newc:0,god:0};
   const box=document.getElementById('prem'),ob=document.getElementById('openb');if(!box||!ob)return;
-  const defs=[['luck','🍀','Chance ×10',500],['newc','🔮','Carte inédite garantie',750],['god','👑','God Pack garanti',1000]],f0=n=>n.toLocaleString('fr-FR');
-  const paint=()=>{
-    box.innerHTML='<div class="premt">💎 Options premium <small>(payées à l’ouverture)</small></div><div class="premr">'+defs.map(([k,ic,nm,pr])=>`<button class="chip ${PREM[k]?'on':''}" data-k="${k}">${ic} ${nm} · ${f0(pr)} 🪙</button>`).join('')+'</div>';
-    const c=premCost(PREM);ob.innerHTML=c?`Ouvrir · ${f0(c)} 🪙`:'Ouvrir le booster';
-    box.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const k=b.dataset.k;PREM[k]=PREM[k]?0:1;if(k==='god'&&PREM.god)PREM.luck=0;if(k==='luck'&&PREM.luck)PREM.god=0;try{sfx.tap()}catch(e){}paint()})};
+  const defs=[['luck','🍀','Chance ×10',500,'10 fois plus de chances d’avoir des rares'],['newc','🔮','Carte inédite garantie',750,'Au moins une carte que tu n’as pas encore'],['god','👑','God Pack garanti',1000,'Toutes les cartes sont rares ou mieux']],f0=n=>n.toLocaleString('fr-FR');
+  const paint=()=>{const c=premCost(PREM),nm=defs.filter(d=>PREM[d[0]]).map(d=>d[1]).join(' ');
+    box.innerHTML=`<button class="chip premb ${c?'on':''}" id="premb">💎 ${c?nm+' · '+f0(c)+' 🪙':'Options premium'} ▾</button>`;
+    ob.innerHTML=c?`Ouvrir · ${f0(c)} 🪙`:'Ouvrir le booster';
+    box.querySelector('#premb').onclick=openSheet};
+  const openSheet=()=>{
+    const o=document.createElement('div');o.className='premsh';
+    o.innerHTML=`<div class="premsc"><div class="premgrab"></div><b class="premh">💎 Options premium</b><small class="premsub">Payées à l’ouverture du booster · tu peux en choisir plusieurs</small>${defs.map(([k,ic,n,pr,ds])=>`<button class="premo" data-k="${k}"><span class="pi">${ic}</span><span class="pt"><b>${n}</b><small>${ds}</small></span><span class="pp">${f0(pr)} 🪙</span><i class="pck"></i></button>`).join('')}<button class="cta" id="premok"></button></div>`;
+    document.body.appendChild(o);
+    const sync=()=>{o.querySelectorAll('.premo').forEach(b=>{const on=!!PREM[b.dataset.k];b.classList.toggle('on',on);b.querySelector('.pck').textContent=on?'✓':''});const c=premCost(PREM);o.querySelector('#premok').innerHTML=c?`Valider · ${f0(c)} 🪙`:'Valider'};
+    const close=()=>{o.remove();paint()};
+    o.querySelectorAll('.premo').forEach(b=>b.onclick=()=>{const k=b.dataset.k;PREM[k]=PREM[k]?0:1;if(k==='god'&&PREM.god)PREM.luck=0;if(k==='luck'&&PREM.luck)PREM.god=0;try{sfx.tap()}catch(e){}sync()});
+    o.querySelector('#premok').onclick=close;o.onclick=e=>{if(e.target===o)close()};sync()};
   paint()}
-document.head.insertAdjacentHTML('beforeend','<style>.prem{margin:4px 0 10px;text-align:center}.premt{font-weight:800;font-size:13px;margin-bottom:6px}.premt small{font-weight:500;opacity:.7}.premr{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>.prem{margin:0 0 8px;text-align:center}.premb{display:inline-flex;align-items:center;gap:6px;font-weight:700;max-width:100%}.premsh{position:fixed;inset:0;z-index:100000;background:#0008;display:flex;align-items:flex-end;animation:fade .2s}.premsc{width:100%;box-sizing:border-box;background:#fff;color:#2a2550;border-radius:22px 22px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;box-shadow:0 -10px 40px #0006}html[data-theme=dark] .premsc{background:#1a1540;color:#f3f1ff}.premgrab{width:42px;height:4px;border-radius:2px;background:#8884;margin:0 auto 4px}.premh{font-size:18px;text-align:center}.premsub{text-align:center;opacity:.65;font-size:12px;margin-bottom:2px}.premo{display:flex;align-items:center;gap:10px;text-align:left;border:2px solid transparent;border-radius:14px;padding:10px 12px;background:rgba(122,92,255,.1);color:inherit;font:inherit;cursor:pointer}.premo.on{border-color:#7a5cff;background:rgba(122,92,255,.22)}.premo .pi{font-size:24px}.premo .pt{flex:1;min-width:0}.premo .pt b{display:block;font-size:15px}.premo .pt small{display:block;opacity:.7;font-size:12px;line-height:1.25}.premo .pp{font-weight:800;white-space:nowrap}.premo .pck{width:22px;height:22px;border-radius:50%;border:2px solid #8886;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;font-weight:800;flex:none}.premo.on .pck{background:#7a5cff;border-color:#7a5cff;color:#fff}.premsc .cta{margin-top:4px}</style>');
 function draw(cards,n=10,pika=false,vint=false){
   if(cards[0]&&cards[0].fam){GOD=false;return pickW(cards,Math.random()<.15?3:2,()=>1)}
   GOD=n>=3&&(FORCEGOD||Math.random()*100<cfg.gp);
@@ -899,7 +907,7 @@ function focusScreen(){
   <button class="cta" id="openb">${s.id==='fam'?'Ouvrir · 700 🪙':'Ouvrir le booster'}</button>`;
   premInit();
   const p=$.querySelector('.pk'),area=$.querySelector('.fpk');
-  p.style.setProperty('--fs',Math.max(1.15,Math.min(1.62,(innerHeight-((!TY&&!BATTLE&&s.id!=='fam')?500:340))/330,(innerWidth-60)/190)).toFixed(2));
+  p.style.setProperty('--fs',Math.max(1.15,Math.min(1.62,(innerHeight-((!TY&&!BATTLE&&s.id!=='fam')?390:340))/330,(innerWidth-60)/190)).toFixed(2));
   if(!BOOST[s.id])loadArt(p.querySelector('.art'),s.id);
   const NS='http://www.w3.org/2000/svg';let g=null;
   const mkSvg=()=>{p.querySelectorAll('.cut').forEach(e=>e.remove());const v=document.createElementNS(NS,'svg');v.setAttribute('class','cut');v.setAttribute('viewBox','0 0 190 320');v.innerHTML='<polyline class="cg"/><polyline class="cw"/><polyline class="cd"/>';p.appendChild(v);return v};
