@@ -3201,17 +3201,75 @@ size();sync();sig=sg();
 window.__xfx={sync,fx,get kind(){return kind},get running(){return!!raf},get n(){return P.length+stars.length+mc.length},get scale(){return scale},get ema(){return ema}};
 }catch(e){console.warn('xfx',e)}})();
 </script>
-<style>.rsbar{position:sticky;bottom:calc(96px + env(safe-area-inset-bottom));z-index:20;display:flex;flex-direction:column;padding:26px 0 2px;margin-top:6px;background:linear-gradient(to bottom,transparent,var(--bg,#0b0920) 28px);pointer-events:none}.rsbar>*{pointer-events:auto}.rsbar .cta{margin-top:0}.rsbar .lnk{padding:8px 14px}</style>
+<style>
+.fanwrap{flex:1;display:flex;flex-direction:column;min-height:250px}
+#fan{position:relative;flex:1;margin:0 6px;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.fc{position:absolute;transform-origin:50% 100%;border-radius:7px;background:#111;box-shadow:0 0 0 2px var(--tc,#fff),0 8px 18px #000a;transition:transform .22s cubic-bezier(.2,.8,.3,1),box-shadow .2s}
+.fc img{width:100%;height:100%;display:block;border-radius:6px;pointer-events:none;-webkit-user-drag:none}
+.fc.last{box-shadow:0 0 0 3px var(--tc,#fff),0 0 16px var(--tc,#fff),0 8px 18px #000a}
+.fc.on{box-shadow:0 0 0 3px var(--tc,#fff),0 0 26px var(--tc,#fff),0 14px 30px #000c}
+.fcn{position:absolute;left:4px;top:4px;background:#7ddc8a;color:#06210d;font-weight:800;font-size:9px;border-radius:7px;padding:1px 5px;pointer-events:none}
+#fancap{min-height:46px;text-align:center;font-weight:800;font-size:15px;padding:8px 12px 0;line-height:1.25}
+#fancap small{display:block;opacity:.7;font-weight:600;font-size:12px}
+</style>
 <script>
-/* Boutons "Rouvrir" / "Choisir un autre booster" toujours visibles (collants au-dessus de la barre de navigation) */
+/* Résultats : cartes en éventail, la carte sous le doigt grossit */
 (function(){const prev=window.results;if(typeof prev!=='function')return;
 window.results=function(){const r=prev.apply(this,arguments);
-try{const app=document.getElementById('app');if(!app||document.getElementById('rsbar'))return r;
-const g=app.querySelector(':scope > .grow');if(!g)return r;
-const items=[];let n=g.nextElementSibling;while(n){items.push(n);n=n.nextElementSibling}
-if(!items.length)return r;
-const bar=document.createElement('div');bar.className='rsbar';bar.id='rsbar';
-g.after(bar);items.forEach(e=>bar.appendChild(e));}catch(e){console.warn('rsbar',e)}
+try{
+if(typeof BATTLE!=='undefined'&&BATTLE)return r;
+const app=document.getElementById('app');if(!app)return r;
+const grid=app.querySelector(':scope > .grid');if(!grid)return r;
+const src=[...grid.children];if(!src.length)return r;
+const n=src.length;
+grid.style.display='none';
+const gr=app.querySelector(':scope > .grow');if(gr)gr.style.display='none';
+const wrap=document.createElement('div');wrap.className='fanwrap';
+wrap.innerHTML='<div id="fan"></div><div id="fancap"><small>Glisse le doigt sur les cartes · touche deux fois pour agrandir</small></div>';
+grid.after(wrap);
+const fan=wrap.querySelector('#fan'),cap=wrap.querySelector('#fancap');
+const info=src.map(g=>{const im=g.querySelector('img'),pr=g.querySelector('.pr');
+  return {src:im?im.getAttribute('src'):'',name:im?(im.getAttribute('alt')||''):'',price:pr?pr.textContent:'',isNew:!!g.querySelector('.star'),last:g.classList.contains('last'),tc:g.style.getPropertyValue('--tc')}});
+const els=info.map((c,i)=>{const e=document.createElement('div');e.className='fc'+(c.last?' last':'');
+  if(c.tc)e.style.setProperty('--tc',c.tc);
+  e.innerHTML='<img draggable="false" alt="" src="'+c.src.replace(/"/g,'&quot;')+'">'+(c.isNew?'<span class="fcn">NEW</span>':'');
+  e.style.zIndex=i+1;fan.appendChild(e);return e});
+let act=-1,G={},first=true;
+function geom(){const W=fan.clientWidth,H=fan.clientHeight;
+  const ch=Math.min(H*.5,W*.36*1.396),cw=ch/1.396;
+  const maxA=Math.min(24,2.4*n),pad=cw/2+ch*.3*Math.sin(maxA*Math.PI/180)+4;
+  const step=n>1?(W-2*pad)/(n-1):0,s=Math.min(1.85,(H-6)/ch);
+  G={W,H,ch,cw,maxA,pad,step,s}}
+function pose(){const {W,H,ch,cw,maxA,pad,step,s}=G;if(!W||!H)return;
+  els.forEach((e,i)=>{const t=n>1?i/(n-1)*2-1:0,cx=n>1?pad+i*step:W/2;
+    const top=H-ch-8-(1-t*t)*H*.05;
+    e.style.width=cw+'px';e.style.height=ch+'px';e.style.left=(cx-cw/2)+'px';e.style.top=top+'px';
+    let dx=0,dy=0,rot=t*maxA,sc=1;
+    if(act>=0){
+      if(i===act){const half=s*cw/2,c2=Math.min(Math.max(cx,half+2),W-half-2);dx=c2-cx;dy=(H-ch-8)-top;rot=0;sc=s}
+      else{const d=i-act,ad=Math.abs(d);if(ad<5){dx=Math.sign(d)*(s-1)*cw*.5*(1-(ad-1)/4)}}
+    }
+    e.style.transform='translate('+dx+'px,'+dy+'px) rotate('+rot+'deg) scale('+sc+')';
+    e.style.zIndex=i===act?200:i+1;
+    e.classList.toggle('on',i===act)})}
+function caption(){if(act<0)return;const c=info[act];
+  cap.innerHTML=(c.name?c.name:'')+(c.isNew?' <span style="color:#7ddc8a">· NEW</span>':'')+'<small class="pv">'+c.price+'</small>'}
+function setAct(i){i=Math.max(0,Math.min(n-1,i));if(i===act)return;act=i;pose();caption();if(navigator.vibrate)try{navigator.vibrate(5)}catch(_){}}
+function idxAt(x){const r=fan.getBoundingClientRect();return n>1?Math.round((x-r.left-G.pad)/G.step):0}
+let down=false,sx=0,moved=false,wasAct=false,dIdx=-1;
+fan.addEventListener('pointerdown',e=>{down=true;sx=e.clientX;moved=false;dIdx=Math.max(0,Math.min(n-1,idxAt(e.clientX)));wasAct=(dIdx===act);try{fan.setPointerCapture(e.pointerId)}catch(_){}setAct(dIdx);e.preventDefault()});
+fan.addEventListener('pointermove',e=>{if(!down&&e.pointerType!=='mouse')return;if(down&&Math.abs(e.clientX-sx)>8)moved=true;setAct(idxAt(e.clientX))});
+const end=e=>{if(!down)return;down=false;if(e.type==='pointerup'&&!moved&&wasAct&&act>=0&&src[act])src[act].click()};
+fan.addEventListener('pointerup',end);fan.addEventListener('pointercancel',end);
+function layout(){geom();
+  if(first){first=false;els.forEach((e,i)=>{e.style.transition='none';e.style.transform='translate(0,0) rotate(0deg) scale(.6)';e.style.opacity='0'});
+    pose();els.forEach(e=>{e.style.transform='translate(0,0) rotate(0deg) scale(.6)'});void fan.offsetWidth;
+    requestAnimationFrame(()=>{els.forEach((e,i)=>{e.style.transition='transform .5s cubic-bezier(.2,.9,.3,1.15) '+(i*45)+'ms,opacity .3s '+(i*45)+'ms,box-shadow .2s';e.style.opacity='1'});pose();
+      setTimeout(()=>els.forEach(e=>{e.style.transition=''}),n*45+650)})}
+  else pose()}
+layout();
+if(window.ResizeObserver){let t;new ResizeObserver(()=>{clearTimeout(t);t=setTimeout(()=>{geom();pose()},60)}).observe(fan)}
+}catch(err){console.warn('fan',err);const g=document.querySelector('#app > .grid');if(g)g.style.display='';const f=document.querySelector('.fanwrap');if(f)f.remove();const gr=document.querySelector('#app > .grow');if(gr)gr.style.display=''}
 return r};})();
 </script>
 <style>.pbi{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.22em;-webkit-user-drag:none;pointer-events:none}</style>
