@@ -1678,6 +1678,8 @@ async function enrichCard(c,sid){
 window.zoomAny=async id=>{const sid=viewId,c=cardsOf(B[sid],sid).find(x=>x.id===id);if(!c)return;
   let e;try{e=await enrichCard(c,sid)}catch(_){e={...c,setId:sid,tier:c.ni?'SR':'C'}}zoom(e)};
 let MULT=0,MSUM=0,MTOT=0,MLAST=null;
+try{Object.defineProperty(window,'MTOT',{get:()=>MTOT,configurable:true})}catch(e){}
+
 const WK='wal_v1',wal=()=>store.get(WK,0),setWal=v=>{store.set(WK,Math.round(v*100)/100);updWal()};
 const _fs=window.focusScreen;window.focusScreen=function(){_fs();if(BATTLE||(TY&&!MULT))return;const w=$.querySelector('.swh');if(!w)return;
   w.insertAdjacentHTML('beforebegin',MULT>0?`<div class="hint">${TY&&tyc.etb>0?'📦 ETB':'Série en cours'} : ${MTOT-MULT+1}/${MTOT}</div>`:'');
@@ -2331,14 +2333,18 @@ window.settingsScreen=function(){prev.apply(this,arguments);try{
 (function(){try{
 let H=null;const on=()=>H===null?(H=(()=>{try{return store.get('haptics',true)!==false}catch(e){return true}})()):H;
 const raw=navigator.vibrate&&navigator.vibrate.bind(navigator);
-if(raw){navigator.vibrate=p=>on()?raw(p):false;
- const P={snap:7,tap:5,card:12,swish:14,zoom:10,done:[25,50,25],god:[90,50,180,50,300]};
+// Beaucoup de téléphones ignorent les vibrations < ~15 ms : on impose un minimum perceptible
+const boost=p=>Array.isArray(p)?p.map((v,i)=>i%2?v:Math.max(v,22)):Math.max(+p||0,22);
+if(raw){navigator.vibrate=p=>{if(!on())return false;try{return raw(boost(p))}catch(e){return false}};
+ const P={snap:22,tap:20,card:30,swish:30,zoom:26,done:[40,60,40],god:[90,50,180,50,300]};
  Object.keys(P).forEach(k=>{const f=sfx[k];if(typeof f==='function')sfx[k]=function(){try{navigator.vibrate(P[k])}catch(e){}return f.apply(this,arguments)}})}
 const prev=window.settingsScreen;
 window.settingsScreen=function(){prev.apply(this,arguments);try{
  const h=$.querySelector('h1');if(!h)return;
- h.insertAdjacentHTML('afterend','<div class="row st"><div class="t"><b>Retour haptique</b><small>'+(raw?'Petites vibrations à l’ouverture du booster, à chaque carte et pour les cartes rares.':'Non pris en charge par cet appareil (iPhone).')+'</small></div><button class="chip '+(on()?'on':'')+'" id="hpt">'+(on()?'Activé':'Désactivé')+'</button></div>');
- const b=document.getElementById('hpt');if(b)b.onclick=()=>{H=!on();try{store.set('haptics',H)}catch(e){}if(H&&raw)raw([30,40,60]);window.settingsScreen()};
+ h.insertAdjacentHTML('afterend','<div class="row st"><div class="t"><b>Retour haptique</b><small>'+(raw?'Petites vibrations à l’ouverture du booster, à chaque carte et pour les cartes rares.':'Non pris en charge par cet appareil (iPhone).')+'</small></div><button class="chip '+(on()?'on':'')+'" id="hpt">'+(on()?'Activé':'Désactivé')+'</button>'+(raw?'<button class="chip" id="hpx" style="margin-left:6px">Tester</button>':'')+'</div>');
+ const b=document.getElementById('hpt');if(b)b.onclick=()=>{H=!on();try{store.set('haptics',H)}catch(e){}if(H&&raw)raw([60,40,90]);window.settingsScreen()};
+ const tb=document.getElementById('hpx');if(tb)tb.onclick=()=>{let ok=false;try{ok=raw([80,50,80,50,160])}catch(e){}
+  if(typeof toast==='function')toast(ok?'📳 Vibration envoyée. Rien ne bouge ? Vérifie que ton téléphone n’est pas en mode Ne pas déranger / silencieux et que les vibrations système sont activées.':'⚠️ Le navigateur a refusé la vibration (touche d’abord l’écran, ou ce navigateur ne la gère pas).')};
 }catch(e){}};
 }catch(e){}})();
 </script>
@@ -3202,32 +3208,35 @@ window.__xfx={sync,fx,get kind(){return kind},get running(){return!!raf},get n()
 }catch(e){console.warn('xfx',e)}})();
 </script>
 <style>
-.fanwrap{flex:1;display:flex;flex-direction:column;min-height:250px}
-#fan{position:relative;flex:1;margin:0 6px;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.fc{position:absolute;transform-origin:50% 100%;border-radius:7px;background:#111;box-shadow:0 0 0 2px var(--tc,#fff),0 8px 18px #000a;transition:transform .22s cubic-bezier(.2,.8,.3,1),box-shadow .2s}
+.fanwrap{display:flex;flex-direction:column;flex:none;margin:2px 0 0}
+#fan{position:relative;flex:none;height:clamp(250px,calc(100dvh - 520px),430px);margin:0 4px;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.fc{position:absolute;transform-origin:50% 100%;border-radius:7px;background:#111;box-shadow:0 0 0 2px var(--tc,#fff),0 6px 14px #0008;transition:transform .26s cubic-bezier(.2,.8,.3,1),box-shadow .2s;will-change:transform}
 .fc img{width:100%;height:100%;display:block;border-radius:6px;pointer-events:none;-webkit-user-drag:none}
-.fc.last{box-shadow:0 0 0 3px var(--tc,#fff),0 0 16px var(--tc,#fff),0 8px 18px #000a}
-.fc.on{box-shadow:0 0 0 3px var(--tc,#fff),0 0 26px var(--tc,#fff),0 14px 30px #000c}
+.fc.last{box-shadow:0 0 0 3px var(--tc,#fff),0 0 14px var(--tc,#fff),0 6px 14px #0008}
+.fc.on{box-shadow:0 0 0 2px var(--tc,#fff),0 0 24px var(--tc,#fff),0 14px 30px #000c}
 .fcn{position:absolute;left:4px;top:4px;background:#7ddc8a;color:#06210d;font-weight:800;font-size:9px;border-radius:7px;padding:1px 5px;pointer-events:none}
-#fancap{min-height:46px;text-align:center;font-weight:800;font-size:15px;padding:8px 12px 0;line-height:1.25}
+#fancap{min-height:44px;text-align:center;font-weight:800;font-size:15px;padding:12px 12px 0;line-height:1.25}
 #fancap small{display:block;opacity:.7;font-weight:600;font-size:12px}
 </style>
 <script>
-/* Résultats : cartes en éventail, la carte sous le doigt grossit */
+/* Résultats : cartes en éventail (à la verticale). Le doigt qui glisse agrandit la carte
+   et écarte ses voisines ; toucher la carte agrandie l'ouvre en grand. */
 (function(){const prev=window.results;if(typeof prev!=='function')return;
 window.results=function(){const r=prev.apply(this,arguments);
 try{
 if(typeof BATTLE!=='undefined'&&BATTLE)return r;
 const app=document.getElementById('app');if(!app)return r;
+const old=app.querySelector(':scope > .fanwrap');if(old)old.remove();
 const grid=app.querySelector(':scope > .grid');if(!grid)return r;
 const src=[...grid.children];if(!src.length)return r;
 const n=src.length;
 grid.style.display='none';
 const gr=app.querySelector(':scope > .grow');if(gr)gr.style.display='none';
 const wrap=document.createElement('div');wrap.className='fanwrap';
-wrap.innerHTML='<div id="fan"></div><div id="fancap"><small>Glisse le doigt sur les cartes · touche deux fois pour agrandir</small></div>';
+wrap.innerHTML='<div id="fan"></div><div id="fancap"><small>Glisse le doigt sur les cartes · touche une carte pour l’agrandir</small></div>';
 grid.after(wrap);
 const fan=wrap.querySelector('#fan'),cap=wrap.querySelector('#fancap');
+const HINT=cap.innerHTML;
 const info=src.map(g=>{const im=g.querySelector('img'),pr=g.querySelector('.pr');
   return {src:im?im.getAttribute('src'):'',name:im?(im.getAttribute('alt')||''):'',price:pr?pr.textContent:'',isNew:!!g.querySelector('.star'),last:g.classList.contains('last'),tc:g.style.getPropertyValue('--tc')}});
 const els=info.map((c,i)=>{const e=document.createElement('div');e.className='fc'+(c.last?' last':'');
@@ -3236,33 +3245,46 @@ const els=info.map((c,i)=>{const e=document.createElement('div');e.className='fc
   e.style.zIndex=i+1;fan.appendChild(e);return e});
 let act=-1,G={},first=true;
 function geom(){const W=fan.clientWidth,H=fan.clientHeight;
-  const ch=Math.min(H*.5,W*.36*1.396),cw=ch/1.396;
-  const maxA=Math.min(24,2.4*n),pad=cw/2+ch*.3*Math.sin(maxA*Math.PI/180)+4;
-  const step=n>1?(W-2*pad)/(n-1):0,s=Math.min(1.85,(H-6)/ch);
+  /* hauteur d'une carte au repos : ~ la moitié de la zone, bornée par la largeur */
+  let ch=Math.min(H*.6,W*.5*1.396),cw=ch/1.396;
+  const maxA=Math.min(9,1.1*n);                       /* éventail léger : les cartes restent quasi droites */
+  const pad=cw/2+ch*Math.sin(maxA*Math.PI/180)+6;
+  const step=n>1?(W-2*pad)/(n-1):0;
+  const s=Math.max(1.2,Math.min(1.9,(H-4)/ch));       /* échelle de la carte sous le doigt */
   G={W,H,ch,cw,maxA,pad,step,s}}
 function pose(){const {W,H,ch,cw,maxA,pad,step,s}=G;if(!W||!H)return;
-  els.forEach((e,i)=>{const t=n>1?i/(n-1)*2-1:0,cx=n>1?pad+i*step:W/2;
-    const top=H-ch-8-(1-t*t)*H*.05;
-    e.style.width=cw+'px';e.style.height=ch+'px';e.style.left=(cx-cw/2)+'px';e.style.top=top+'px';
-    let dx=0,dy=0,rot=t*maxA,sc=1;
-    if(act>=0){
-      if(i===act){const half=s*cw/2,c2=Math.min(Math.max(cx,half+2),W-half-2);dx=c2-cx;dy=(H-ch-8)-top;rot=0;sc=s}
-      else{const d=i-act,ad=Math.abs(d);if(ad<5){dx=Math.sign(d)*(s-1)*cw*.5*(1-(ad-1)/4)}}
-    }
-    e.style.transform='translate('+dx+'px,'+dy+'px) rotate('+rot+'deg) scale('+sc+')';
-    e.style.zIndex=i===act?200:i+1;
-    e.classList.toggle('on',i===act)})}
-function caption(){if(act<0)return;const c=info[act];
+  const rot=i=>n>1?(i/(n-1)*2-1)*maxA:0, base=i=>n>1?pad+i*step:W/2;
+  const cx=new Array(n);
+  if(act<0){for(let i=0;i<n;i++)cx[i]=base(i)}
+  else{
+    const half=s*cw/2,strip=Math.max(14,Math.min(30,step*.9));
+    const ca=Math.min(Math.max(base(act),half+3),W-half-3);cx[act]=ca;
+    const L=act,R=n-1-act;
+    if(L){const near=ca-half-strip+cw/2,far=Math.min(pad,near);
+      for(let i=0;i<L;i++)cx[i]=L>1?far+(near-far)*i/(L-1):near}
+    if(R){const near=ca+half+strip-cw/2,far=Math.max(W-pad,near);
+      for(let i=act+1;i<n;i++)cx[i]=R>1?near+(far-near)*(i-act-1)/(R-1):near}
+  }
+  els.forEach((e,i)=>{const t=n>1?i/(n-1)*2-1:0;
+    e.style.width=cw+'px';e.style.height=ch+'px';e.style.left=(cx[i]-cw/2)+'px';e.style.top=(H-ch-16)+'px';
+    const on=i===act,dy=on?0:(t*t)*H*.03;
+    e.style.transform='translate(0,'+dy+'px) rotate('+(on?0:rot(i))+'deg) scale('+(on?s:1)+')';
+    e.style.zIndex=on?200:(act<0?i+1:(i<act?i+1:n-i));
+    e.classList.toggle('on',on)})}
+function caption(){if(act<0){cap.innerHTML=HINT;return}const c=info[act];
   cap.innerHTML=(c.name?c.name:'')+(c.isNew?' <span style="color:#7ddc8a">· NEW</span>':'')+'<small class="pv">'+c.price+'</small>'}
-function setAct(i){i=Math.max(0,Math.min(n-1,i));if(i===act)return;act=i;pose();caption();if(navigator.vibrate)try{navigator.vibrate(5)}catch(_){}}
+function setAct(i){i=Math.max(0,Math.min(n-1,i));if(i===act)return;act=i;pose();caption();if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}}
 function idxAt(x){const r=fan.getBoundingClientRect();return n>1?Math.round((x-r.left-G.pad)/G.step):0}
 let down=false,sx=0,moved=false,wasAct=false,dIdx=-1;
-fan.addEventListener('pointerdown',e=>{down=true;sx=e.clientX;moved=false;dIdx=Math.max(0,Math.min(n-1,idxAt(e.clientX)));wasAct=(dIdx===act);try{fan.setPointerCapture(e.pointerId)}catch(_){}setAct(dIdx);e.preventDefault()});
-fan.addEventListener('pointermove',e=>{if(!down&&e.pointerType!=='mouse')return;if(down&&Math.abs(e.clientX-sx)>8)moved=true;setAct(idxAt(e.clientX))});
+fan.addEventListener('pointerdown',e=>{down=true;sx=e.clientX;moved=false;dIdx=Math.max(0,Math.min(n-1,idxAt(e.clientX)));
+  /* si la carte agrandie est touchée directement (pas la zone d'une voisine), on vise celle-ci */
+  if(act>=0){const b=els[act].getBoundingClientRect();if(e.clientX>=b.left&&e.clientX<=b.right&&e.clientY>=b.top&&e.clientY<=b.bottom)dIdx=act}
+  wasAct=(dIdx===act);try{fan.setPointerCapture(e.pointerId)}catch(_){}setAct(dIdx);e.preventDefault()});
+fan.addEventListener('pointermove',e=>{if(!down)return;if(Math.abs(e.clientX-sx)>8)moved=true;if(moved)setAct(idxAt(e.clientX))});
 const end=e=>{if(!down)return;down=false;if(e.type==='pointerup'&&!moved&&wasAct&&act>=0&&src[act])src[act].click()};
 fan.addEventListener('pointerup',end);fan.addEventListener('pointercancel',end);
 function layout(){geom();
-  if(first){first=false;els.forEach((e,i)=>{e.style.transition='none';e.style.transform='translate(0,0) rotate(0deg) scale(.6)';e.style.opacity='0'});
+  if(first){first=false;els.forEach(e=>{e.style.transition='none';e.style.opacity='0'});
     pose();els.forEach(e=>{e.style.transform='translate(0,0) rotate(0deg) scale(.6)'});void fan.offsetWidth;
     requestAnimationFrame(()=>{els.forEach((e,i)=>{e.style.transition='transform .5s cubic-bezier(.2,.9,.3,1.15) '+(i*45)+'ms,opacity .3s '+(i*45)+'ms,box-shadow .2s';e.style.opacity='1'});pose();
       setTimeout(()=>els.forEach(e=>{e.style.transition=''}),n*45+650)})}
