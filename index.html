@@ -2334,12 +2334,13 @@ window.settingsScreen=function(){prev.apply(this,arguments);try{
 let H=null;const on=()=>H===null?(H=(()=>{try{return store.get('haptics',true)!==false}catch(e){return true}})()):H;
 const raw=navigator.vibrate&&navigator.vibrate.bind(navigator);
 if(raw){navigator.vibrate=p=>on()?raw(p):false;
- const P={snap:7,tap:5,card:12,swish:14,zoom:10,done:[25,50,25],god:[90,50,180,50,300]};
+ const P={snap:20,tap:15,card:25,swish:25,zoom:20,done:[25,50,25],god:[90,50,180,50,300]};
  Object.keys(P).forEach(k=>{let f=sfx[k];if(typeof f!=='function')return;Object.defineProperty(sfx,k,{configurable:true,enumerable:true,get(){return function(){try{navigator.vibrate(P[k])}catch(e){}return f.apply(this,arguments)}},set(v){f=v}})})}
 const prev=window.settingsScreen;
 window.settingsScreen=function(){prev.apply(this,arguments);try{
  const h=$.querySelector('h1');if(!h)return;
- h.insertAdjacentHTML('afterend','<div class="row st"><div class="t"><b>Retour haptique</b><small>'+(raw?'Petites vibrations à l’ouverture du booster, à chaque carte et pour les cartes rares.':'Non pris en charge par cet appareil (iPhone).')+'</small></div><button class="chip '+(on()?'on':'')+'" id="hpt">'+(on()?'Activé':'Désactivé')+'</button></div>');
+ h.insertAdjacentHTML('afterend','<div class="row st"><div class="t"><b>Retour haptique</b><small>'+(raw?'Petites vibrations à l’ouverture du booster, à chaque carte et pour les cartes rares.':'Non pris en charge par cet appareil (iPhone).')+'</small></div><button class="chip '+(on()?'on':'')+'" id="hpt">'+(on()?'Activé':'Désactivé')+'</button> <button class="chip" id="hpt2">Tester</button></div>');
+ const t=document.getElementById('hpt2');if(t)t.onclick=()=>{const r=raw?raw([200,100,200]):null;const ia=navigator.userActivation?navigator.userActivation.hasBeenActive:'?';toast(raw?('Vibration '+(r?'envoyée ✅':'refusée ❌')+' · iframe : '+(window.top!==window?'oui':'non')+' · interaction : '+ia):'Vibration non supportée par ce navigateur')};
  const b=document.getElementById('hpt');if(b)b.onclick=()=>{H=!on();try{store.set('haptics',H)}catch(e){}if(H&&raw){const ok=raw([30,40,60]);if(!ok&&typeof toast==='function')toast('📳 Vibration bloquée : vérifie que les vibrations sont actives sur ton téléphone (ni silencieux, ni économie d’énergie).')}window.settingsScreen()};
 }catch(e){}};
 }catch(e){}})();
