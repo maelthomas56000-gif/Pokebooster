@@ -2835,7 +2835,7 @@ const _st=window.statsScreen;window.statsScreen=function(){_st.apply(this,argume
 const _rs2=window.results;window.results=function(){_rs2.apply(this,arguments);
   if(TY||BATTLE||(window.__mt&&window.__mt())||!window.mbxQuick)return;
   const b=[...$.querySelectorAll('.cta')].find(x=>/Rouvrir/.test(x.textContent));if(!b)return;
-  b.insertAdjacentHTML('beforebegin','<div id="xq" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:4px 0 8px"><small>Rouvrir d’un coup :</small>'+[3,5,10,20].map(n=>`<button class="chip" data-q="${n}">×${n}</button>`).join('')+'</div>');
+  b.insertAdjacentHTML('beforebegin','<div id="xq" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:4px 0 8px"><small>Rouvrir d’un coup :</small>'+[3,5,10].map(n=>`<button class="chip" data-q="${n}">×${n}</button>`).join('')+'</div>');
   $.querySelectorAll('#xq [data-q]').forEach(e=>e.onclick=()=>window.mbxQuick(+e.dataset.q))};
 
 /* ---------- Échanges de doublons entre amis ---------- */
