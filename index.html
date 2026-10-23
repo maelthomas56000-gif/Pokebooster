@@ -593,7 +593,7 @@ function hideSet(id){
 }
 // ---------- Réglages & sons ----------
 const cfg=Object.assign({luck:1,miss:false,snd:true,vol:.7,prices:false,theme:'light',rp:true,lang:'en',gp:1},store.get('cfg_v1',{}));
-cfg.miss=cfg.miss===true;cfg.gp=Math.min(+cfg.gp||0,70);
+cfg.miss=cfg.miss===true;cfg.gp=.05;cfg.luck=1;
 API='https://api.tcgdex.net/v2/'+(cfg.lang==='fr'?'fr':'en');
 const saveCfg=()=>store.set('cfg_v1',cfg);
 let AC=null,MG=null;
@@ -770,7 +770,7 @@ function drawNorm(cards,n=10,pika=false,vint=false){
 }
 
 let GOD=false,BATTLE=null;
-const fairDraw=fn=>{const o=[cfg.luck,cfg.gp,cfg.miss,cfg.rp];cfg.luck=1;cfg.gp=1;cfg.miss=false;cfg.rp=true;try{return fn()}finally{[cfg.luck,cfg.gp,cfg.miss,cfg.rp]=o}};
+const fairDraw=fn=>{const o=[cfg.luck,cfg.gp,cfg.miss,cfg.rp];cfg.luck=1;cfg.gp=.05;cfg.miss=false;cfg.rp=true;try{return fn()}finally{[cfg.luck,cfg.gp,cfg.miss,cfg.rp]=o}};
 const pickW=(arr,k,w)=>{const a=[...arr],o=[];while(o.length<k&&a.length){const tot=a.reduce((s,c)=>s+w(c),0);let r=Math.random()*tot,i=0;for(;i<a.length-1;i++){r-=w(a[i]);if(r<=0)break}o.push(a.splice(i,1)[0])}return o};
 function drawGod(all,n,pika){
   const PKU=c=>/pikachu/i.test(c.name),base=all.filter(c=>!c.ni&&!c.rp),k=n-(pika?1:0);
@@ -781,9 +781,38 @@ function drawGod(all,n,pika){
   if(pika){const pks=base.filter(PKU),ne=pks.filter(c=>!/\bex\b/i.test(c.name)),p=rnd(ne.length?ne:pks);if(p)out.push({...p,pk:true})}
   return out;
 }
+let PREM=null,FORCEGOD=false,LASTPAID=0,LASTGODFORCED=false;
+const PREMP={luck:500,newc:750,god:1000};
+const premCost=o=>o?(o.luck?500:0)+(o.newc?750:0)+(o.god?1000:0):0;
+function premDraw(cards,S0,id){
+  const base=()=>draw(cards,packSize(S0),is30(S0),isVint(S0));
+  const sel=(id==='fam'||!PREM)?null:{...PREM};PREM=null;
+  if(!sel||!premCost(sel))return base();
+  if(sel.newc&&!cards.some(c=>!col[c.id]&&!c.ni&&!c.rp)){sel.newc=0;toast('Tu as déjà toutes les cartes de cette extension : carte inédite non facturée.')}
+  const cost=premCost(sel);if(!cost)return base();
+  if(window.pbGet()<cost){toast('Pas assez de 🪙 : booster normal ouvert.');return base()}
+  window.pbAdd(-cost);LASTPAID=cost;
+  const L0=cfg.luck;if(sel.luck)cfg.luck=10;FORCEGOD=!!sel.god;
+  let pk;try{pk=base()}finally{cfg.luck=L0;FORCEGOD=false}
+  if(sel.god&&!GOD){window.pbAdd(PREMP.god);LASTPAID-=PREMP.god;toast('God Pack impossible pour cette extension : 1 000 🪙 remboursés.')}
+  LASTGODFORCED=!!(sel.god&&GOD);
+  if(sel.newc&&!pk.some(c=>!col[c.id])){
+    const pool=cards.filter(c=>!col[c.id]&&!c.ni&&!c.rp),hi=pool.filter(c=>RANK[c.tier]>=2),src=(GOD&&hi.length)?hi:pool,u=src[Math.floor(Math.random()*src.length)];
+    if(u){pk[0]=u;pk.sort((a,b)=>(RANK[a.tier]||0)-(RANK[b.tier]||0))}}
+  return pk}
+function premInit(){
+  PREM={luck:0,newc:0,god:0};
+  const box=document.getElementById('prem'),ob=document.getElementById('openb');if(!box||!ob)return;
+  const defs=[['luck','🍀','Chance ×10',500],['newc','🔮','Carte inédite garantie',750],['god','👑','God Pack garanti',1000]],f0=n=>n.toLocaleString('fr-FR');
+  const paint=()=>{
+    box.innerHTML='<div class="premt">💎 Options premium <small>(payées à l’ouverture)</small></div><div class="premr">'+defs.map(([k,ic,nm,pr])=>`<button class="chip ${PREM[k]?'on':''}" data-k="${k}">${ic} ${nm} · ${f0(pr)} 🪙</button>`).join('')+'</div>';
+    const c=premCost(PREM);ob.innerHTML=c?`Ouvrir · ${f0(c)} 🪙`:'Ouvrir le booster';
+    box.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const k=b.dataset.k;PREM[k]=PREM[k]?0:1;if(k==='god'&&PREM.god)PREM.luck=0;if(k==='luck'&&PREM.luck)PREM.god=0;try{sfx.tap()}catch(e){}paint()})};
+  paint()}
+document.head.insertAdjacentHTML('beforeend','<style>.prem{margin:4px 0 10px;text-align:center}.premt{font-weight:800;font-size:13px;margin-bottom:6px}.premt small{font-weight:500;opacity:.7}.premr{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}</style>');
 function draw(cards,n=10,pika=false,vint=false){
   if(cards[0]&&cards[0].fam){GOD=false;return pickW(cards,Math.random()<.15?3:2,()=>1)}
-  GOD=n>=3&&Math.random()*100<cfg.gp;
+  GOD=n>=3&&(FORCEGOD||Math.random()*100<cfg.gp);
   if(GOD){const g=drawGod(cards,n,pika);if(g&&g.length>=3)return g;GOD=false}
   return drawNorm(cards,n,pika,vint);
 }
@@ -866,9 +895,11 @@ function focusScreen(){
   $.innerHTML=`<div class="fh fhs"><button class="back" onclick="${BATTLE?"BATTLE=null;go('social')":"go(TY?'tycoon':fromSet==='list'?'collection':fromSet?'set':'home')"}">${BATTLE?'‹ Amis':TY?'‹ Tycoon':fromSet==='list'?'‹ Collection':fromSet?'‹ '+esc(s.name):'‹ Boosters'}</button></div>
   <div class="center fpk">${packHTML(s,'on foc')}</div>
   <div class="swh">${BATTLE?'⚔️ Combat contre '+esc(BATTLE.f.n)+' · ':''}Découpe le booster avec ton doigt, dans le sens que tu veux</div>${s.id==='fam'?`<div class="sub" style="text-align:center">Contient <b>2 cartes</b> · <b>15 %</b> de chances d’en avoir une <b>3ᵉ</b></div>`:''}${TY?`<div class="sub" style="text-align:center">Prix : <b>${fm(packPrice(s.id))}</b> · Ton argent : <b>${fm(tyc.money)}</b></div>`:''}
+  ${(!TY&&!BATTLE&&s.id!=='fam')?'<div class="prem" id="prem"></div>':''}
   <button class="cta" id="openb">${s.id==='fam'?'Ouvrir · 700 🪙':'Ouvrir le booster'}</button>`;
+  premInit();
   const p=$.querySelector('.pk'),area=$.querySelector('.fpk');
-  p.style.setProperty('--fs',Math.max(1.15,Math.min(1.62,(innerHeight-340)/330,(innerWidth-60)/190)).toFixed(2));
+  p.style.setProperty('--fs',Math.max(1.15,Math.min(1.62,(innerHeight-((!TY&&!BATTLE&&s.id!=='fam')?500:340))/330,(innerWidth-60)/190)).toFixed(2));
   if(!BOOST[s.id])loadArt(p.querySelector('.art'),s.id);
   const NS='http://www.w3.org/2000/svg';let g=null;
   const mkSvg=()=>{p.querySelectorAll('.cut').forEach(e=>e.remove());const v=document.createElementNS(NS,'svg');v.setAttribute('class','cut');v.setAttribute('viewBox','0 0 190 320');v.innerHTML='<polyline class="cg"/><polyline class="cw"/><polyline class="cd"/>';p.appendChild(v);return v};
@@ -939,9 +970,10 @@ function cutPolys(pts){
 }
 
 async function tearOpen(p,pts){
-  if(busy) return; const id=p.dataset.id;
+  if(busy) return; const id=p.dataset.id;LASTGODFORCED=false;LASTPAID=0;
   if(TY&&!(tyc.etb>0)&&tyc.money<(packPrice(id)??0)-1e-9){p.style.animationPlayState='';toast('Pas assez d’argent pour ce booster.');return}
   if(id==='fam'&&!BATTLE&&!TY){if(window.pbGet()<700){p.style.animationPlayState='';toast('Il te faut 700 🪙 pour ouvrir un booster Mystère.');return}window.pbAdd(-700)}
+  if(!BATTLE&&!TY&&id!=='fam'&&PREM&&premCost(PREM)>window.pbGet()){p.style.animationPlayState='';toast('Il te faut '+premCost(PREM).toLocaleString('fr-FR')+' 🪙 pour ces options premium.');return}
   busy=true;
   if(!pts||pts.length<2) pts=[[-12,50],[202,50]];
   p.style.animationPlayState='paused';
@@ -970,7 +1002,7 @@ async function tearOpen(p,pts){
     const [cards]=await Promise.all([t,new Promise(r=>setTimeout(r,800))]);
     if(cards.length&&cards[0].gen){clearTimeout(tm);ovl&&ovl.remove();ov.remove();busy=false;hideSet(id);toast('Cette extension n’a pas d’images disponibles : elle a été retirée de la liste.');go('home');return}
     clearTimeout(tm); ovl&&ovl.remove();
-    const S0=sets.find(x=>x.id===id)||{id,name:''};pack=TY?tycDraw(cards,S0):BATTLE?fairDraw(()=>draw(cards,packSize(S0),is30(S0),isVint(S0))):draw(cards,packSize(S0),is30(S0),isVint(S0)); if(pack.length<1) throw 0;
+    const S0=sets.find(x=>x.id===id)||{id,name:''};pack=TY?tycDraw(cards,S0):BATTLE?fairDraw(()=>draw(cards,packSize(S0),is30(S0),isVint(S0))):premDraw(cards,S0,id); if(pack.length<1) throw 0;LASTPAID=0;
     pack.forEach(c=>c.isNew=!col[c.id]);
     pack.forEach(c=>{try{new Image().src=img(c,'high')}catch(e){}});
     packVal=pack.reduce((s,c)=>s+(val(c)||0),0);
@@ -982,12 +1014,12 @@ async function tearOpen(p,pts){
      if(stats.last!==td){stats.streak=stats.last===d(1)?(stats.streak||0)+1:1;stats.last=td;stats.bst=Math.max(stats.bst||0,stats.streak)}
      (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+1}
     const bc=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]);
-    stats.gods=(stats.gods||0)+(GOD?1:0);stats.gn=(stats.gn||0)+(GOD&&(TY||cfg.gp<=1)?1:0);(stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:packVal,g:GOD?1:0,d:Date.now()});stats.hist.length=Math.min(stats.hist.length,500);
+    stats.gods=(stats.gods||0)+(GOD?1:0);stats.gn=(stats.gn||0)+(GOD&&!LASTGODFORCED&&(TY||cfg.gp<=1)?1:0);(stats.hist=stats.hist||[]).unshift({s:S0.name||id,i:bc.id,b:bc.name,t:bc.tier,v:packVal,g:GOD?1:0,d:Date.now()});stats.hist.length=Math.min(stats.hist.length,500);
     if(!TY&&(!stats.best||(val(bc)||0)>stats.best.price)) stats.best={name:bc.name,price:val(bc)||0,image:bc.image};
     persistSoon();}
     idx=0; busy=false; fx('#fff',0,true); ov.remove(); go('reveal');
   }catch(e){
-    clearTimeout(tm); ovl&&ovl.remove(); delete pre[id]; busy=false; if(id==='fam'&&!BATTLE&&!TY)window.pbAdd(700);
+    clearTimeout(tm); ovl&&ovl.remove(); delete pre[id]; busy=false; if(id==='fam'&&!BATTLE&&!TY)window.pbAdd(700);if(LASTPAID){window.pbAdd(LASTPAID);LASTPAID=0}
     ov.remove(); p.style.visibility=''; p.style.animationPlayState=''; p.querySelectorAll('.cut').forEach(e=>e.remove());
     const m=document.getElementById('meta')||document.querySelector('.swh'); if(m) m.textContent='Impossible d\'ouvrir cette extension — réessaie ou choisis-en une autre';
   }
@@ -1174,7 +1206,7 @@ async function tycPrep(id){
   const cards=await (pre[id]||(pre[id]=loadSet(id).catch(e=>{delete pre[id];throw e})));
   if(!cards.length||cards[0].gen){hideSet(id);throw new Error('noimg')}
   if(!tyc.ev[id]){
-    const S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1;cfg.miss=false;cfg.gp=1;cfg.rp=true;let t=0;const N=300;
+    const S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1;cfg.miss=false;cfg.gp=.05;cfg.rp=true;let t=0;const N=300;
     try{for(let i=0;i<N;i++)t+=draw(cards,sz,is30(S0),isVint(S0)).reduce((s,c)=>s+cv(c),0)}finally{cfg.luck=L0;cfg.miss=M0;cfg.gp=G0;cfg.rp=R0}
     tyc.ev[id]=Math.round(t/N*100)/100;saveT();
   }
@@ -1184,7 +1216,7 @@ function tycRun(id,n){
   const cards=tcards[id],S0=sets.find(x=>x.id===id)||{id,name:''},sz=packSize(S0),pk=is30(S0),vi=isVint(S0),
     price=packPrice(id),mult=sellMult()*mktMult(S0),L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;
   let rev=0,nc=0,nw=0,gods=0,top=[];
-  cfg.luck=1*(1+.04*tyc.lv.luck);cfg.miss=false;cfg.gp=1;cfg.rp=true;
+  cfg.luck=1*(1+.04*tyc.lv.luck);cfg.miss=false;cfg.gp=.05;cfg.rp=true;
   try{for(let i=0;i<n;i++){
     const pack=draw(cards,sz,pk,vi);if(GOD)gods++;
     for(const c of pack){
@@ -1206,7 +1238,7 @@ function tycRun(id,n){
   return{n,rev,cost,nc,nw,gods,top,profit:rev-cost};
 }
 function tycDraw(cards,S0){
-  const L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1*(1+.04*tyc.lv.luck);cfg.miss=false;cfg.gp=1;cfg.rp=true;let pk;
+  const L0=cfg.luck,M0=cfg.miss,G0=cfg.gp,R0=cfg.rp;cfg.luck=1*(1+.04*tyc.lv.luck);cfg.miss=false;cfg.gp=.05;cfg.rp=true;let pk;
   try{pk=draw(cards,packSize(S0),is30(S0),isVint(S0))}finally{cfg.luck=L0;cfg.miss=M0;cfg.gp=G0;cfg.rp=R0}
   const m=sellMult()*mktMult(S0);
   return pk.map(c=>{const v=cv(c)*m;return{...c,o:[c.p??null,c.ph??null],p:v,ph:v}});
@@ -1370,8 +1402,7 @@ function settingsScreen(){
   const [a,b,c]=lk();
   $.innerHTML=`<h1>Réglages</h1>
   <h2>Taux de drop</h2>
-  <div class="row st"><div class="t"><b>Cartes rares <em id="lkv">×${cfg.luck}</em></b><small id="lkd">Rare holo ou mieux : ${c} % · Ultra rare+ : ${b} % · Secrète : ${a} %</small><input type="range" id="lkr" min="1" max="6" step=".5" value="${cfg.luck}"></div></div>
-  <div class="row st"><div class="t"><b>God Pack <em id="gpv">${cfg.gp} %</em></b><small>Chance qu'un booster soit entièrement composé de cartes rares ou mieux (70 % maximum). 0 % = jamais.</small><input type="range" id="gpr" min="0" max="11" step="1" value="${Math.max(0,GPV.findIndex(v=>v>=cfg.gp))}"></div></div>
+  <div class="row st"><div class="t"><b>Taux fixes</b><small>God Pack : 0,05 % (comme dans le vrai jeu). La chance ×10, la carte inédite garantie et le God Pack garanti s’achètent en 🪙 à l’ouverture d’un booster.</small></div></div>
   <div class="row st"><div class="t"><b>Cartes qui me manquent</b><small>Légère préférence pour les cartes que tu n'as pas encore. Les rares restent rares.</small></div><button class="chip ${cfg.miss?'on':''}" id="tm">${cfg.miss?'Activé':'Désactivé'}</button></div>
 
   <div class="row st"><div class="t"><b>Thème</b><small>Clair doux ou sombre</small></div><button class="chip on" id="tt">${cfg.theme==='dark'?'Sombre':'Clair'}</button></div>
@@ -1388,9 +1419,7 @@ function settingsScreen(){
   <div class="row st"><div class="t"><b>Tout effacer</b><small>Supprime la collection et les statistiques</small></div><button class="chip dg" id="xr">Effacer</button></div>
   <p class="hint">Un booster a le nombre de cartes réel de son extension (ex. 6 pour 30th Celebration).</p>`;
 
-  document.getElementById('lkr').oninput=e=>{cfg.luck=+e.target.value;saveCfg();const [a,b,c]=lk();document.getElementById('lkv').textContent='×'+cfg.luck;document.getElementById('lkd').textContent=`Rare holo ou mieux : ${c} % · Ultra rare+ : ${b} % · Secrète : ${a} %`;sfx.snap()};
   document.getElementById('vol').oninput=e=>{cfg.vol=+e.target.value;saveCfg();sfx.tap()};
-  document.getElementById('gpr').oninput=e=>{cfg.gp=GPV[+e.target.value];saveCfg();document.getElementById('gpv').textContent=cfg.gp+' %';sfx.snap()};
   document.getElementById('tm').onclick=()=>{cfg.miss=!cfg.miss;saveCfg();settingsScreen()};
 
   document.getElementById('tt').onclick=()=>{cfg.theme=cfg.theme==='dark'?'light':'dark';saveCfg();applyTheme();settingsScreen()};
@@ -1819,7 +1848,7 @@ const pbd=()=>{const v=+store.get(PBK,0);return v>0?Math.floor(v):0};
 const pbSet=v=>{store.set(PBK,Math.max(0,Math.floor(v)));pbPill()};
 const pbCost=c=>{if(c.fam)return 1000;const v=Math.max(0,+(c.price??c.p??c.ph??0))||0;return Math.min(30000,Math.max(1,Math.round((PBT[c.tier]??4)+12*Math.pow(v,.9))))};
 const pbN=n=>n.toLocaleString('fr-FR');
-const pbSV=c=>{const b=({E:1,C:1,U:2,R:3,RH:4,UR:7,SR:10,F:3})[c.tier]||1;return Math.min(10,/\bex\b/i.test(c.name||'')?Math.max(5,b):b)};
+const pbSV=c=>{if(c.fam)return 25;const b=({E:1,C:1,U:2,R:3,RH:4,UR:7,SR:10,F:3})[c.tier]||1;return Math.min(10,/\bex\b/i.test(c.name||'')?Math.max(5,b):b)};
 const pn=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 document.head.insertAdjacentHTML('beforeend','<style>#pbp{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;z-index:35;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:22px;background:var(--pan2,#fff);color:var(--ink,#222);border:1px solid var(--bd,#0002);box-shadow:0 4px 14px var(--sh,#0003);font-size:15px;cursor:pointer}#pbp b{font-weight:900}#pbp small{font-size:11px;opacity:.7}body.ovx #pbp{display:none!important}.pbbal{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:6px 16px 12px;padding:14px;border-radius:22px;background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2a00;font-weight:900;box-shadow:0 8px 22px #ff9f4355}.pbbal span{font-size:30px}.pbbal b{font-size:42px;line-height:1}.pbbal small{font-size:15px;font-weight:800}.pbg2{position:relative}.pbq{position:absolute;top:4px;left:4px;background:#000b;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;font-weight:800}.pbv{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:#ffd166;color:#3a2a00;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:900;white-space:nowrap}.pbt{margin:10px 16px;font-size:13px;opacity:.85;text-align:center;line-height:1.5}.pbcost{font-size:34px;font-weight:900;color:#ffd166}.pbrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}</style>');
 function pbPill(){let p=document.getElementById('pbp');if(!p){p=document.createElement('div');p.id='pbp';p.onclick=()=>openX(xPb);document.body.appendChild(p)}
@@ -1829,12 +1858,13 @@ setTimeout(pbPill,0);
 const pbHead=t=>`<h1>${t}</h1><div class="pbbal"><span>🪙</span><b>${pbN(pbd())}</b><small>Pokébidou${pbd()>1?'s':''}</small></div>`;
 const pbSave=()=>{store.set(KEY,col)};
 function xPb(){const all=Object.values(col),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0);
-  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">Échange tes doublons contre des 🪙 Pokébidou : chaque carte rapporte de 1 à 10 🪙 selon sa rareté (ex : 5 🪙, plus grosses rares : 10 🪙). Dépense-les pour acheter n’importe quelle carte.</p>
+  $.innerHTML=`${pbHead('🪙 Boutique')}<p class="hint">Échange tes doublons contre des 🪙 Pokébidou : chaque carte rapporte de 1 à 10 🪙 selon sa rareté (ex : 5 🪙, plus grosses rares : 10 🪙 · doublons Mystère : 25 🪙). Dépense-les pour acheter n’importe quelle carte.</p>
   ${pbDailyHTML()}<button class="cta" id="pbs">♻️ Échanger mes cartes<br><small>${dbl} doublon${dbl>1?'s':''} · ${all.length} carte${all.length>1?'s':''} différente${all.length>1?'s':''}</small></button>
   <button class="cta" id="pbb">🛒 Acheter des cartes</button>
+  <button class="cta" id="pbc">🎨 Cosmétiques · cadres &amp; fonds</button>
   ${pbGoalsHTML()}<div class="pbt"><b>Tarifs (dès)</b><br>Énergie 2 · Commune 4 · Peu commune 8 · Rare 20<br>Holo 60 · Ultra rare 200 · Secrète 400<br>+ un gros supplément selon la valeur réelle : une carte à 150 € coûte ≈ 1 500 🪙, une carte à plusieurs milliers d’euros, des dizaines de milliers</div>
   <div class="grow"></div><button class="lnk" onclick="go('collection')">Retour</button>`;
-  pbDailyBind();document.getElementById('pbs').onclick=()=>openX(xPbSell);document.getElementById('pbb').onclick=()=>{pbq='';openX(xPbShop)}}
+  pbDailyBind();document.getElementById('pbs').onclick=()=>openX(xPbSell);document.getElementById('pbb').onclick=()=>{pbq='';openX(xPbShop)};document.getElementById('pbc').onclick=()=>openX(xCos)}
 let pbF='dup';
 function xPbSell(){const all=Object.values(col).sort((a,b)=>b.count-a.count||String(a.name).localeCompare(b.name)),dbl=all.reduce((s,c)=>s+Math.max(0,c.count-1),0),gain=all.reduce((s,c)=>s+Math.max(0,c.count-1)*pbSV(c),0),list=pbF==='dup'?all.filter(c=>c.count>1):all;
   $.innerHTML=`${pbHead('♻️ Échanger')}<button class="cta" id="pba" ${dbl?'':'disabled style="opacity:.45"'}>Échanger tous mes doublons · +${pbN(gain)} 🪙</button>
@@ -1875,15 +1905,29 @@ function pbBuy(c){const cost=pbCost(c),bal=pbd(),n=col[c.id]?col[c.id].count:0,o
     col[c.id]={id:c.id,setId:c.setId||pbS,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,fam:c.fam,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:(c.p??c.ph)??e?.price??null,count:(e?.count||0)+1};
     pbSave();o.remove();toast('🎉 '+c.name+' ajoutée à ta collection !');pbCheckSets();if(navigator.vibrate)navigator.vibrate(40);xPbSet()}}
 
+const RWP={bronze:300,silver:600,gold:1200,neon:2000,prism:3000,rose:800,emerald:1500,dusk:500,aurora:1000,galaxy:1800};
+function xCos(){
+  const cf=rwNow('f'),cb=rwNow('b');
+  const sec=(w,t,L,cur)=>`<h2>${t}</h2><div class="rwg">${L.map(([id,nm,need])=>{const ok=rwOk(id,need);return `<button class="rwi ${cur===id?'on':''} ${ok?'':'lk'}" data-w="${w}" data-id="${id}"><i class="rwp" ${w==='f'?`data-fr="${id}"`:`data-bg="${id}"`}></i><b>${nm}</b><small>${ok?(cur===id?'Équipé ✓':'Équiper'):'🪙 '+pbN(RWP[id]||0)}</small></button>`}).join('')}</div>`;
+  $.innerHTML=`${pbHead('🎨 Cosmétiques')}<p class="hint">Achète des cadres et des fonds, puis équipe-les. Les cadres entourent tes cartes, les fonds apparaissent quand tu agrandis une carte.</p>${sec('f','Cadres de carte',RWF,cf)}${sec('b','Fonds',RWB,cb)}<div class="grow"></div><button class="lnk" id="bk">Retour</button>`;
+  document.getElementById('bk').onclick=()=>openX(xPb);
+  $.querySelectorAll('.rwi').forEach(b=>b.onclick=()=>{const w=b.dataset.w,id=b.dataset.id,L=w==='f'?RWF:RWB,r=L.find(x=>x[0]===id);if(!r)return;
+    if(!rwOk(id,r[2])){const pr=RWP[id];if(!pr)return;if(pbd()<pr){toast('Il te faut '+pbN(pr)+' 🪙 pour « '+r[1]+' ».');return}
+      if(!confirm('Acheter « '+r[1]+' » pour '+pbN(pr)+' 🪙 ?'))return;
+      pbSet(pbd()-pr);store.set('rw_owned',[...(store.get('rw_owned',[])||[]),id]);toast('🎨 « '+r[1]+' » acheté !')}
+    store.set(w==='f'?'rw_frame':'rw_bg',id);rwApply();const y=window.scrollY;xCos();window.scrollTo(0,y)});
+}
+setTimeout(()=>{try{rwApply()}catch(e){}},2500);
 /* ===== 🐾 Collection Mystère : booster mystère (700 🪙) + catégorie spéciale de la collection ===== */
 const famCol=f=>col['fam-'+f.k];
 const famOwned=()=>FAM.filter(f=>famCol(f)).length;
 document.head.insertAdjacentHTML('beforeend','<style>.famrow{background:linear-gradient(135deg,#ffe3f0,#ffd1e6)!important;color:#3a0f24!important;border:2px solid #ff7eb6!important}.famrow small,.famrow em{color:#7a2a52!important}.famrow .bar{background:#ff7eb633!important}.famrow .bar i{background:#ff5fa2!important}html[data-theme=dark] .famrow{background:linear-gradient(135deg,#4a1d37,#33142a)!important;color:#ffe3f0!important}html[data-theme=dark] .famrow small,html[data-theme=dark] .famrow em{color:#ffb3d6!important}.famic{font-size:30px;width:58px;text-align:center;flex:none}.g.famg{--tc:#ff7eb6}.famnm{position:absolute;left:6px;right:6px;top:76%;transform:translateY(-50%);text-align:center;font-weight:800;font-size:14px;line-height:1.15;color:#fff;text-shadow:0 1px 5px #000c;pointer-events:none}.famlk{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:#fff;color:#3a0f24;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:800}</style>');
-function xFamCol(){const own=famOwned();
+function xFamCol(){const own=famOwned(),dup=FAM.reduce((t,f)=>t+Math.max(0,(famCol(f)||{count:0}).count-1),0);
   $.innerHTML=`<h1>🐾 Collection Mystère</h1><div class="sub">${own} / ${FAM.length} cartes</div><div class="bar" style="margin:0 20px 10px"><i style="width:${Math.round(100*own/FAM.length)}%"></i></div>
   <div class="grid">${FAM.map((f,i)=>{const o=famCol(f);return o?`<div class="g famg" style="--i:${i}" onclick="zoom(col['fam-${f.k}'])"><img src="${FAMIMG[f.k]}" alt="${esc(f.n)}">${o.count>1?`<span class="badge">×${o.count}</span>`:''}</div>`:`<div class="g famg" style="--i:${i}"><img src="${FAMBACK}" alt=""><span class="famnm">${esc(f.n)}</span><span class="famlk">🔒</span></div>`}).join('')}</div>
   <p class="hint">Les cartes se découvrent en ouvrant des boosters Mystère : leur image n’apparaît qu’une fois obtenue.</p>
-  <div class="grow"></div><button class="cta" id="fgo">🐾 Ouvrir un booster Mystère · 700 🪙</button><button class="lnk" id="rst" style="color:#c0392b">🗑️ Réinitialiser cette collection</button><button class="lnk" id="bk">Retour à la collection</button>`;
+  <div class="grow"></div>${dup?`<button class="cta" id="fsell" style="background:linear-gradient(135deg,#ffd36e,#ffb347);color:#3a2300">♻️ Vendre mes doublons · +${dup*25} 🪙</button>`:''}<button class="cta" id="fgo">🐾 Ouvrir un booster Mystère · 700 🪙</button><button class="lnk" id="rst" style="color:#c0392b">🗑️ Réinitialiser cette collection</button><button class="lnk" id="bk">Retour à la collection</button>`;
+  const fs=document.getElementById('fsell');if(fs)fs.onclick=()=>{if(!confirm('Vendre '+dup+' doublon'+(dup>1?'s':'')+' de la Collection Mystère pour '+(dup*25)+' 🪙 ?\n\nTu gardes un exemplaire de chaque carte.'))return;FAM.forEach(f=>{const c=famCol(f);if(c&&c.count>1)c.count=1});pbSave();pbSet(pbd()+dup*25);toast('+'+(dup*25)+' 🪙');xFamCol()};
   document.getElementById('fgo').onclick=()=>openFromSet('fam','list');
   document.getElementById('rst').onclick=()=>resetSetCollection('fam','Collection Mystère',xFamCol);
   document.getElementById('bk').onclick=()=>go('collection')}
@@ -2315,14 +2359,16 @@ async function priceChart(c,lb){
   box.classList.add('on');const hint=lb.querySelector('.hint');if(hint)hint.style.display='none';
 }
 // ---------- Récompenses de succès : cadres de carte et fonds ----------
-const RWF=[['none','Aucun',0],['bronze','Bronze',3],['silver','Argent',10],['gold','Or',25],['neon','Néon',40],['prism','Prisme',60]];
+const RWF=[['none','Aucun',0],['bronze','Bronze',3],['silver','Argent',10],['gold','Or',25],['neon','Néon',40],['prism','Prisme',60],['rose','Rose Mystère',9999],['emerald','Émeraude',9999]];
 const RWB=[['none','Standard',0],['dusk','Crépuscule',5],['aurora','Aurore',20],['galaxy','Galaxie',45]];
 let _au=0,_at=0;
 let _ain=0;function achU(){if(_au&&Date.now()-_at<4000)return _au;if(_ain)return ACH?ACH.u:0;_ain=1;try{const own=Object.values(col),tot=own.reduce((s,c)=>s+c.count,0),by={};own.forEach(c=>by[c.tier]=(by[c.tier]||0)+c.count);achHTML(own,tot,by);_au=ACH?ACH.u:0;_at=Date.now()}catch(e){}finally{_ain=0}return _au}
-function rwNow(w){const L=w==='f'?RWF:RWB;let id='none';try{id=store.get(w==='f'?'rw_frame':'rw_bg','none')}catch(e){}const r=L.find(x=>x[0]===id);return r&&achU()>=r[2]?id:'none'}
-function setRw(w,id){const L=w==='f'?RWF:RWB,r=L.find(x=>x[0]===id);if(!r||achU()<r[2])return;try{store.set(w==='f'?'rw_frame':'rw_bg',id)}catch(e){}if(typeof sfx!=='undefined')sfx.tap();statsScreen()}
+function rwOk(id,need){if(!need)return true;try{if((store.get('rw_owned',[])||[]).includes(id))return true}catch(e){}return need<9999&&achU()>=need}
+function rwApply(){try{const f=rwNow('f');if(f==='none')delete document.documentElement.dataset.eqfr;else document.documentElement.dataset.eqfr=f}catch(e){}}
+function rwNow(w){const L=w==='f'?RWF:RWB;let id='none';try{id=store.get(w==='f'?'rw_frame':'rw_bg','none')}catch(e){}const r=L.find(x=>x[0]===id);return r&&rwOk(r[0],r[2])?id:'none'}
+function setRw(w,id){const L=w==='f'?RWF:RWB,r=L.find(x=>x[0]===id);if(!r||!rwOk(r[0],r[2]))return;try{store.set(w==='f'?'rw_frame':'rw_bg',id)}catch(e){}rwApply();if(typeof sfx!=='undefined')sfx.tap();statsScreen()}
 function rwHTML(u){
-  const sec=(w,t,L)=>{const cur=rwNow(w);return `<h2>${t}</h2><div class="rwg">${L.map(([id,nm,need])=>{const ok=u>=need;return `<button class="rwi ${cur===id?'on':''} ${ok?'':'lk'}" ${ok?`onclick="setRw('${w}','${id}')"`:''}><i class="rwp" ${w==='f'?`data-fr="${id}"`:`data-bg="${id}"`}></i><b>${nm}</b><small>${ok?(cur===id?'Équipé ✓':'Débloqué'):'🔒 '+need+' succès'}</small></button>`}).join('')}</div>`};
+  const sec=(w,t,L)=>{const cur=rwNow(w);return `<h2>${t}</h2><div class="rwg">${L.map(([id,nm,need])=>{const ok=rwOk(id,need);return `<button class="rwi ${cur===id?'on':''} ${ok?'':'lk'}" ${ok?`onclick="setRw('${w}','${id}')"`:''}><i class="rwp" ${w==='f'?`data-fr="${id}"`:`data-bg="${id}"`}></i><b>${nm}</b><small>${ok?(cur===id?'Équipé ✓':'Débloqué'):(need>=9999?'🔒 Boutique':'🔒 '+need+' succès')}</small></button>`}).join('')}</div>`};
   return sec('f','Récompenses · Cadres de carte',RWF)+sec('b','Récompenses · Fonds',RWB)+'<p class="hint">Tu as débloqué '+u+' succès : ils ouvrent de nouveaux cadres et fonds, visibles quand tu agrandis une carte.</p>'}
 function rwCheck(){try{const n=[...RWF,...RWB].filter(x=>x[2]>0&&achU()>=x[2]).length;let p=store.get('rw_seen',-1);if(p<0){store.set('rw_seen',n);return}if(n>p){store.set('rw_seen',n);if(typeof toast==='function')toast('🎁 Nouvelle récompense débloquée ! (Statistiques)');if(navigator.vibrate)navigator.vibrate([40,40,80])}}catch(e){}}
 {const r0=window.results;if(typeof r0==='function')window.results=function(){const v=r0.apply(this,arguments);_at=0;setTimeout(rwCheck,1500);return v}}
@@ -2347,6 +2393,12 @@ html body .zc[data-fr=bronze]{box-shadow:0 0 0 3px #c88444,0 0 0 5px #6b3f1c,var
 html body .zc[data-fr=silver]{box-shadow:0 0 0 3px #e4e8f0,0 0 0 5px #8a93a3,0 0 20px #cfd6e555,var(--sx,0px) var(--sy,24px) 40px #000b}
 html body .zc[data-fr=gold]{box-shadow:0 0 0 3px #ffd45f,0 0 0 5px #a87400,0 0 28px #ffd45f99,var(--sx,0px) var(--sy,24px) 40px #000b}
 html body .zc[data-fr=neon]{box-shadow:0 0 0 2px #fff,0 0 0 4px #35e0ff,0 0 24px #35e0ffcc,0 0 50px #ab5cff88,var(--sx,0px) var(--sy,24px) 40px #000b}
+html body [data-fr=rose]{box-shadow:0 0 0 3px #ff9ec9,0 0 0 5px #b03a7a,0 0 26px #ff7eb699}
+html body [data-fr=emerald]{box-shadow:0 0 0 3px #5af2a2,0 0 0 5px #0d7a4a,0 0 26px #3dd68c99}
+html body .zc[data-fr=rose]{box-shadow:0 0 0 3px #ff9ec9,0 0 0 5px #b03a7a,0 0 26px #ff7eb699,var(--sx,0px) var(--sy,24px) 40px #000b}
+html body .zc[data-fr=emerald]{box-shadow:0 0 0 3px #5af2a2,0 0 0 5px #0d7a4a,0 0 26px #3dd68c99,var(--sx,0px) var(--sy,24px) 40px #000b}
+html[data-eqfr=bronze]{--eqs:0 0 0 2px #c88444,0 0 0 3px #6b3f1c}html[data-eqfr=silver]{--eqs:0 0 0 2px #e4e8f0,0 0 0 3px #8a93a3}html[data-eqfr=gold]{--eqs:0 0 0 2px #ffd45f,0 0 0 3px #a87400,0 0 10px #ffd45f99}html[data-eqfr=neon]{--eqs:0 0 0 2px #fff,0 0 0 3px #35e0ff,0 0 12px #35e0ffcc}html[data-eqfr=prism]{--eqs:0 0 0 2px #ff6fae,0 0 0 4px #6ad3ff,0 0 0 6px #ab86ff}html[data-eqfr=rose]{--eqs:0 0 0 2px #ff9ec9,0 0 0 3px #b03a7a,0 0 10px #ff7eb699}html[data-eqfr=emerald]{--eqs:0 0 0 2px #5af2a2,0 0 0 3px #0d7a4a,0 0 10px #3dd68c99}
+html[data-eqfr] .g:not(.miss):not(.famlock) img{box-shadow:var(--eqs);border-radius:6px}
 html body .zc[data-fr=prism]{box-shadow:0 0 0 3px #ff6fae,0 0 0 6px #6ad3ff,0 0 0 9px #ab86ff,0 0 30px #ffffff55,var(--sx,0px) var(--sy,24px) 40px #000b}
 html body [data-bg=dusk]{background:linear-gradient(165deg,#1b1038,#7a2f6b 68%,#f2784b)!important;color:#f3f1ff}
 html body [data-bg=aurora]{background:radial-gradient(ellipse at 18% 12%,rgba(31,227,180,.45),transparent 55%),radial-gradient(ellipse at 88% 32%,rgba(122,92,255,.5),transparent 55%),#070b1d!important;color:#f3f1ff}
