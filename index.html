@@ -2333,9 +2333,9 @@ window.settingsScreen=function(){prev.apply(this,arguments);try{
 (function(){try{
 let H=null;const on=()=>H===null?(H=(()=>{try{return store.get('haptics',true)!==false}catch(e){return true}})()):H;
 const raw=navigator.vibrate&&navigator.vibrate.bind(navigator);
-if(raw){navigator.vibrate=p=>on()?raw(p):false;
+if(raw){let L=0;navigator.vibrate=p=>{if(!on())return false;const t=performance.now();if(typeof p==='number'&&t-L<60)return false;L=t;return raw(p)};
  const P={snap:20,tap:15,card:25,swish:25,zoom:20,done:[25,50,25],god:[90,50,180,50,300]};
- Object.keys(P).forEach(k=>{let f=sfx[k];if(typeof f!=='function')return;Object.defineProperty(sfx,k,{configurable:true,enumerable:true,get(){return function(){try{navigator.vibrate(P[k])}catch(e){}return f.apply(this,arguments)}},set(v){f=v}})})}
+ Object.keys(P).forEach(k=>{let f=sfx[k],w=null;if(typeof f!=='function')return;Object.defineProperty(sfx,k,{configurable:true,enumerable:true,get(){return w||(w=function(){try{navigator.vibrate(P[k])}catch(e){}return f.apply(this,arguments)})},set(v){f=v;w=null}})})}
 const prev=window.settingsScreen;
 window.settingsScreen=function(){prev.apply(this,arguments);try{
  const h=$.querySelector('h1');if(!h)return;
