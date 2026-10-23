@@ -1546,6 +1546,7 @@ const FV='fav_v1',BN='bind_v1';
 const favs=()=>store.get(FV,[]).filter(id=>col[id]);
 const ME='me_v1',FR='friends_v2',BT='bt_v1',BH='bh_v1',FK='AIzaSyBB84eer2Mh_lzwalbSfHAeevh9zDOOVdE';
 const BASE='https://firestore.googleapis.com/v1/projects/poke-3342a/databases/(default)/documents/players';
+const DOC=BASE.replace(/\/players$/,''),BB=DOC+'/battles';
 const myId=()=>{let c=store.get('pid_v1',null);if(!c){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';c=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>A[x%A.length]).join('');store.set('pid_v1',c)}return c};
 const dec=s=>{s=(s||'').trim();if(!s.startsWith('PB1-'))throw 0;const o=JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));if(!o||typeof o.n!=='string')throw 0;return o};
 const name=()=>store.get(ME,{name:''}).name||'';
@@ -1553,10 +1554,10 @@ const real=u=>typeof u==='string'&&/^https?:\/\//.test(u);
 const cu=(c,q)=>{const u=c.gen||c.ni?null:(c.rp&&c.ri>=0&&RPU[c.ri])?RPU[c.ri]:c.image?c.image+'/'+q+'.webp':null;return real(u)?u:null};
 const av0=()=>store.get('av_v1','')||'';
 const mine=loc=>{const own=Object.values(col),top=own.reduce((a,c)=>(c.price||0)>((a&&a.price)||0)?c:a,null),a=av0(),ph=a.startsWith('data:')?a:'';
-  const m={n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,ver:4,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:top?{n:top.name,p:top.price||0,u:cu(top,'high'),i:real(top.image)?top.image:null}:null,bt:store.get(BT,[]),a:ph?'':a,f:favs().slice(0,4).map(id=>col[id]).map(c=>({n:c.name,u:cu(c,'low'),i:real(c.image)?c.image:null})).filter(x=>x.u),d:Date.now()};
+  const m={n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,ver:5,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:top?{n:top.name,p:top.price||0,u:cu(top,'high'),i:real(top.image)?top.image:null}:null,bt:[],a:ph?'':a,f:favs().slice(0,4).map(id=>col[id]).map(c=>({n:c.name,u:cu(c,'low'),i:real(c.image)?c.image:null})).filter(x=>x.u),d:Date.now()};
   return loc?{...m,L:top?img(top):null,ph}:m};
-let lastSig='';window.xpush=f=>push(f);
-const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30)+(window.tradeDoc?JSON.stringify(window.tradeDoc()):'');if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>9000&&(m.f.length||m.bt.length>1)){if(m.f.length)m.f.pop();else m.bt.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};const td=window.tradeDoc?window.tradeDoc():null;if(td)fields.t={stringValue:JSON.stringify(td)};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});return r.ok}catch(e){lastSig='';return false}};
+let lastSig='',lastErr='';window.xpush=f=>push(f);
+const push=async(force)=>{if(!name())return false;const m=mine(),ph=av0().startsWith('data:')?av0():'',sig=JSON.stringify({...m,d:0})+ph.length+ph.slice(-30)+(window.tradeDoc?JSON.stringify(window.tradeDoc()):'');if(!force&&sig===lastSig)return true;lastSig=sig;while(JSON.stringify(m).length>9000&&(m.f.length||m.bt.length>1)){if(m.f.length)m.f.pop();else m.bt.pop()}const fields={j:{stringValue:JSON.stringify(m)}};if(ph)fields.p={stringValue:ph};const td=window.tradeDoc?window.tradeDoc():null;if(td)fields.t={stringValue:JSON.stringify(td)};try{const r=await fetch(`${BASE}/${myId()}?key=${FK}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});lastErr=r.ok?'':'HTTP '+r.status+(r.status===403?' · règles Firebase':'');if(!r.ok)lastSig='';return r.ok}catch(e){lastSig='';lastErr='réseau';return false}};
 const pull=async c=>{const r=await fetch(`${BASE}/${c}?key=${FK}&t=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);const d=await r.json(),o=JSON.parse(d.fields.j.stringValue);if(d.fields.p&&d.fields.p.stringValue)o.ph=d.fields.p.stringValue;o.tr=null;if(d.fields.t&&d.fields.t.stringValue){try{o.tr=JSON.parse(d.fields.t.stringValue)}catch(e){}}return o};
 const pAv=o=>o.ph||(o.a&&real(o.a)?o.a+'/low.webp':'');
 const okv=o=>!!(o.me||o.ver>=3);
@@ -1575,21 +1576,22 @@ const bh=()=>store.get(BH,[]);const bhv=()=>bh().filter(x=>!x.hide);
 const ago=d=>{const s=Math.max(0,(Date.now()-d)/1000);if(s<90)return'en ligne';const m=Math.round(s/60);if(m<60)return'vu il y a '+m+' min';const h=Math.round(m/60);if(h<24)return'vu il y a '+h+' h';const j=Math.round(h/24);return j<2?'vu hier':j<30?'vu il y a '+j+' j':'vu il y a longtemps'};
 const pres=(o,mini)=>{if(o.me)return'<span class="pres on"><i></i>en ligne</span>';if(!o.d)return'';const t=ago(o.d),c=t==='en ligne'?'on':(Date.now()-o.d<36e5?'rec':'');return`<span class="pres ${c}"><i></i>${t}</span>`};
 const rec=code=>bh().filter(h=>h.f===code&&!h.hide).reduce((a,h)=>{a[h.w]++;return a},{W:0,L:0,N:0});
-function resolve(l){
-  const me=myId(),mb=store.get(BT,[]),h=bh();
-  l.forEach(f=>{f.pend=null;f.wait=null;if(!f.code||!f.bt)return;
-    f.bt.forEach(e=>{if(e.to!==me)return;const m=mb.find(x=>x.id===e.id);
-      if(m){if(!h.some(x=>x.id===e.id)){h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(m.c)>sc(e.c)?'W':sc(m.c)<sc(e.c)?'L':'N',m:m.c,o:e.c,t:Date.now()})}}
-      else if(!h.some(x=>x.id===e.id)){
-        const o=mb.find(x=>x.to===f.code&&!x.r&&!h.some(y=>y.id===x.id));
-        if(o){/* défis croisés : on les oppose directement */
-          h.unshift({id:e.id,f:f.code,fn:f.n,w:sc(o.c)>sc(e.c)?'W':sc(o.c)<sc(e.c)?'L':'N',m:o.c,o:e.c,t:Date.now()});
-          h.unshift({id:o.id,f:f.code,fn:f.n,w:'X',m:o.c,o:e.c,t:Date.now(),hide:1});
-          o.r=1;store.set(BT,mb)}
-        else f.pend=e}});
-    mb.forEach(m=>{if(m.to===f.code&&!m.r&&Date.now()-(m.t||0)<864e5&&!h.some(x=>x.id===m.id)&&!f.bt.some(e=>e.id===m.id))f.wait=m})});
-  h.length=Math.min(h.length,30);store.set(BH,h);
-}
+const TTL=6048e5;
+const bdoc=d=>{const f=d.fields||{},g=k=>(f[k]&&f[k].stringValue)||'',j=k=>{try{return JSON.parse(g(k))}catch(e){return null}};return{id:d.name.split('/').pop(),a:g('a'),b:g('b'),an:g('an'),bn:g('bn'),s:g('s'),st:g('st'),ra:j('ra'),rb:j('rb'),t:+g('t')||0}};
+const bq=async(k,v)=>{const r=await fetch(DOC+':runQuery?key='+FK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'battles'}],where:{fieldFilter:{field:{fieldPath:k},op:'EQUAL',value:{stringValue:v}}},limit:80}})});if(!r.ok)throw new Error(r.status);return(await r.json()).filter(x=>x.document).map(x=>bdoc(x.document))};
+const bdel=id=>fetch(`${BB}/${id}?key=${FK}`,{method:'DELETE'}).catch(()=>{});
+async function resolve(l){
+  const me=myId(),now=Date.now();let A,B;
+  try{[A,B]=await Promise.all([bq('a',me),bq('b',me)])}catch(e){return}
+  const all=[...A,...B],h=[];
+  A.forEach(x=>{if(x.st!=='done'&&now-x.t>TTL)bdel(x.id)});
+  l.forEach(f=>{f.pend=null;f.wait=null;if(!f.code)return;
+    all.forEach(x=>{if(x.st!=='open'||!x.ra||now-x.t>TTL)return;
+      if(x.b===me&&x.a===f.code&&(!f.pend||x.t>f.pend.t))f.pend={id:x.id,s:x.s,c:x.ra,t:x.t};
+      if(x.a===me&&x.b===f.code&&(!f.wait||x.t>f.wait.t))f.wait=x})});
+  all.forEach(x=>{if(x.st!=='done'||!x.ra||!x.rb)return;const mi=x.a===me,m=mi?x.ra:x.rb,o=mi?x.rb:x.ra,a=sc(m),b=sc(o);
+    h.push({id:x.id,f:mi?x.b:x.a,fn:mi?x.bn:x.an,w:a>b?'W':a<b?'L':'N',m,o,t:x.t})});
+  h.sort((p,q)=>q.t-p.t);h.length=Math.min(h.length,30);store.set(BH,h)}
 function fight(f,ch){
   const id=ch?ch.s:setId;
   if(!sets.find(x=>x.id===id))return toast('Extension indisponible');
@@ -1598,16 +1600,24 @@ function fight(f,ch){
 window.battleResults=function(){
   const B=BATTLE,S0=sets.find(x=>x.id===setId)||{name:''};
   const best=pack.reduce((a,c)=>(val(c)||0)>(val(a)||0)?c:a,pack[0]),bv=val(best)||0,tot=Math.round(pack.reduce((s,c)=>s+(val(c)||0),0)*100)/100;
-  if(!B.done){B.done=1;const e={id:B.ch?B.ch.id:Math.random().toString(36).slice(2,8),to:B.f.code,s:setId,c:{n:best.name,i:best.image,p:bv,t:tot},t:Date.now()};if(B.ch)e.r=1;store.set(BT,[e,...store.get(BT,[]).filter(x=>x.id!==e.id)].slice(0,8));if(B.ch){const hh=bh();if(!hh.some(x=>x.id===e.id)){hh.unshift({id:e.id,f:B.f.code,fn:B.f.n,w:tot>sc(B.ch.c)?'W':tot<sc(B.ch.c)?'L':'N',m:e.c,o:B.ch.c,t:Date.now()});hh.length=Math.min(hh.length,30);store.set(BH,hh)}}push(true)}
+  let FIRE=false;if(!B.done){B.done=1;FIRE=true}
+  const run=()=>{const el=document.getElementById('bst');if(el)el.textContent='Envoi du résultat…';
+    const me=myId(),r=JSON.stringify({n:best.name,i:best.image,p:bv,t:tot}),H={'Content-Type':'application/json'},S=v=>({stringValue:v});
+    const req=B.ch?fetch(`${BB}/${B.ch.id}?key=${FK}&updateMask.fieldPaths=rb&updateMask.fieldPaths=st&currentDocument.exists=true`,{method:'PATCH',headers:H,body:JSON.stringify({fields:{rb:S(r),st:S('done')}})})
+      :fetch(`${BB}/${Math.random().toString(36).slice(2,12)}?key=${FK}`,{method:'PATCH',headers:H,body:JSON.stringify({fields:{a:S(me),an:S(name()||'Dresseur'),b:S(B.f.code),bn:S(B.f.n),s:S(setId),st:S('open'),ra:S(r),t:S(String(Date.now()))}})});
+    req.then(x=>x.status).catch(()=>0).then(c=>{const ok=c===200,e=document.getElementById('bst');if(ok)refresh(false,true);if(!e)return;
+      if(ok)e.textContent='✓ Résultat enregistré';else if(c===404)e.textContent='⚠️ Ce défi a été annulé par ton ami';
+      else{e.innerHTML='⚠️ Envoi échoué ('+(c||'réseau')+') <button class="lnk" id="rty">Réessayer</button>';document.getElementById('rty').onclick=run}})};
   let res='Défi envoyé ! Le résultat apparaîtra dès que '+esc(B.f.n)+' aura ouvert son booster.';
   if(B.ch){const o=sc(B.ch.c);res=(tot>o?'🏆 Tu gagnes !':tot<o?'💀 Tu perds…':'🤝 Égalité')+`<br><small>Ton total ${fmt(tot)} contre ${fmt(o)}</small>`;if(tot>o&&navigator.vibrate)navigator.vibrate([60,40,60,40,120])}
   L=pack;
   $.innerHTML=`<h1>⚔️ Combat contre ${esc(B.f.n)}</h1><div class="sub" style="text-align:center">${esc(S0.name||'')}</div>
   <div class="pc"><img class="fv" src="${img(best)}" alt=""><b style="font-size:18px">${esc(best.name)}</b><b style="font-size:22px">${fmt(tot)}</b><small>Total du booster · meilleure carte : ${fmt(bv)}</small></div>
-  <h2 style="text-align:center;margin:10px 16px">${res}</h2>
+  <h2 style="text-align:center;margin:10px 16px">${res}</h2><div class="hint" id="bst" style="text-align:center"></div>
   <div class="grid">${pack.map((c,i)=>`<div class="g" style="--i:${i};--tc:${tc(c)}" onclick="zoom(L[${i}])"><img src="${img(c)}" alt=""><span class="pr" style="display:block">${fmt(val(c))}</span></div>`).join('')}</div>
   <div class="grow"></div><button class="cta" id="bk">Retour aux amis</button>`;
   document.getElementById('bk').onclick=()=>{BATTLE=null;go('social')};
+  if(FIRE)run();
   sfx.done(RANK[pack[pack.length-1].tier]);
 };
 const hc=(c,l)=>`<div style="flex:1;text-align:center"><small>${l}</small>${c.i?`<img src="${esc(c.i)}/low.webp" alt="" style="width:64px;display:block;margin:4px auto;border-radius:6px" onerror="this.remove()">`:''}<small>${esc(c.n)}</small><b style="display:block">${fmt(sc(c))}</b></div>`;
@@ -1620,7 +1630,7 @@ function paint(){
   <input id="sn" maxlength="20" placeholder="Ton pseudo" value="${esc(name())}">
   ${card({...mine(true),me:1})}
   <button class="lnk" id="sav">🖼️ Changer ma photo de profil</button>
-  <div style="text-align:center">${pres({me:1})}</div><p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne':''}</p>
+  <div style="text-align:center">${pres({me:1})}</div><p class="hint">Ton code ami : <b style="letter-spacing:2px;user-select:text">${myId()}</b>${ok===true?' · en ligne ✓':ok===false?' · hors ligne'+(lastErr?' ('+lastErr+')':''):''}</p>
   <button class="cta" id="sc">Copier mon code</button>
   <button class="lnk" id="ss">Partager mon code</button>
   <h2>Ajouter un ami</h2>
@@ -1647,7 +1657,7 @@ function paint(){
       const l=store.get(FR,[]).filter(x=>code?x.code!==code:x.n!==o.n);l.unshift(o);store.set(FR,l);toast(o.n+' ajouté !');paint();
     }catch(e){toast('Code introuvable')}};
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=store.get(FR,[]);l.splice(+b.dataset.del,1);store.set(FR,l);paint()});
-  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{const f=fr[+b.dataset.cancel];if(f&&f.wait){store.set(BT,store.get(BT,[]).filter(x=>x.to!==f.code||x.r));f.wait=null;f.pend=null;toast('Défi annulé');store.set(FR,fr);lastSig='';push(true);paint()}});
+  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{const f=fr[+b.dataset.cancel];if(!f||!f.wait)return;try{const r=await fetch(`${BB}/${f.wait.id}?key=${FK}`,{method:'DELETE'});if(!r.ok)throw 0;f.wait=null;f.pend=null;store.set(FR,fr);toast('Défi annulé');paint()}catch(e){toast('Échec, réessaie')}});
   document.querySelectorAll('[data-fight]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");fight(fr[+b.dataset.fight],null)});
   document.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>{if(!name())return toast("Choisis d'abord un pseudo");const f=fr[+b.dataset.resp];fight(f,f.pend)});
   window.tradeUI&&window.tradeUI(fr);
@@ -1837,12 +1847,12 @@ async function refresh(repaint,force){
   try{ok=name()?await push(force):null;
     const l=store.get(FR,[]);
     await Promise.all(l.map(async f=>{if(!f.code)return;try{const o=await pull(f.code);Object.assign(f,{ph:''},o,{code:f.code,d:o.d||Date.now()})}catch(e){}}));
-    resolve(l);store.set(FR,l);if(window.tradeSync&&window.tradeSync(l))push(true);badge(l);
+    await resolve(l);store.set(FR,l);if(window.tradeSync&&window.tradeSync(l))push(true);badge(l);
   }finally{busyR=0}
   if(repaint&&screen==='social'&&!document.querySelector('.xbt')&&!(document.activeElement&&document.activeElement.tagName==='INPUT')&&sigP()!==lastPaint){const y=window.scrollY;paint();window.scrollTo(0,y)}
 }
 window.socialScreen=function(){paint();refresh(true,true)};
-setInterval(()=>{if(!document.hidden&&name())refresh(true,true)},30000);
+setInterval(()=>{if(!document.hidden&&name())refresh(true,true)},15000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh(true)});
 setTimeout(()=>refresh(false),2500);
 
