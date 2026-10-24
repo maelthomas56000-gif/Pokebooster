@@ -1568,10 +1568,10 @@ const tile=(ic,v,l)=>`<div class="st"><i>${ic}</i><b>${v}</b><small>${l}</small>
 const card=(o,extra)=>{const v=okv(o),bu=o.me&&o.L?o.L:(o.b&&(o.b.u||(real(o.b.i)?o.b.i+'/high.webp':null)));
   return `<div class="pf" style="--ph:${hue(o.n)}"><div class="pf-b"></div>${avH(o,92)}<div class="pf-n">${esc(o.n)}</div>${o.me?'<button class="pf-edit" id="cam">📷 Changer ma photo</button>':''}
   <div class="pf-v">${v?fmt(o.v):'—'}<small>Valeur de la collection</small></div>
-  ${o.b?`<div class="pf-bc">${bu?`<img src="${esc(bu)}" alt="" onerror="this.style.display='none'">`:`<div class="pf-ph">🃏</div>`}<div class="pf-chip">👑 ${esc(o.b.n)} · ${fmt(o.b.p)}</div><small>Carte la plus chère</small></div>`:''}
+  ${o.b?`<div class="pf-bc">${bu?`<img src="${esc(bu)}" alt="${esc(o.b.n)}">`:`<div class="pf-ph">🃏</div>`}<div class="pf-chip">👑 ${esc(o.b.n)} · ${fmt(o.b.p)}</div><small>Carte la plus chère</small></div>`:''}
   <div class="pg">${tile('📦',o.p,'Boosters')}${tile('🗂️',o.u,'Différentes')}${tile('🃏',o.t,'Total')}${tile('💎',v?fmt(o.v):'—','Valeur')}${tile('📈',v&&o.p?fmt(o.v/o.p):'—','Moy. / booster')}${o.s!=null?`${tile('🔥',o.s+' j','Série')}${tile('✨',o.r||0,'Cartes UR/SR')}${tile('🌟',o.g||0,'God packs (taux normal)')}`:''}</div>
   ${o.o?((o.o.l>1||o.o.p>1||o.o.m)?`<div class="pf-t warn">⚠️ Options activées : chance ×${o.o.l} · God pack ${o.o.p} %${o.o.m?' · cartes manquantes':''}</div>`:'<div class="pf-t">✓ Taux de drop normaux</div>'):''}
-  ${o.f&&o.f.length?`<div class="pf-f">${o.f.map(x=>{const u=x.u||(real(x.i)?x.i+'/low.webp':'');return u?`<img src="${esc(u)}" alt="" onerror="this.remove()">`:''}).join('')}</div><small class="pf-fl">⭐ Cartes favorites</small>`:''}${extra||''}</div>`};
+  ${o.f&&o.f.length?`<div class="pf-f">${o.f.map(x=>{const u=x.u||(real(x.i)?x.i+'/low.webp':'');return u?`<img src="${esc(u)}" alt="${esc(x.n||'')}">`:''}).join('')}</div><small class="pf-fl">⭐ Cartes favorites</small>`:''}${extra||''}</div>`};
 let ok=null,lastPaint='';
 const sigP=()=>JSON.stringify([store.get(FR,[]).map(f=>({...f,d:Math.floor((f.d||0)/6e4)})),{...mine(),d:0},bh(),ok,name(),av0().length,av0().slice(-30)]);
 const bh=()=>store.get(BH,[]);const bhv=()=>bh().filter(x=>!x.hide);
