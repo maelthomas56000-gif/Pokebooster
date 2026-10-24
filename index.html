@@ -2002,9 +2002,9 @@ const _zPb=window.zoom;window.zoom=function(c){_zPb.apply(this,arguments);if(!c|
 window.pbGet=pbd;window.pbAdd=d=>pbSet(pbd()+d);window.pbN=pbN;
 const PBD='pb_daily_v1',PB_SET=100,PBSD='pb_sets_v1';
 function pbDay(n){const t=new Date();t.setDate(t.getDate()-(n||0));return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()}
-/* Bonus du jour : 5 🪙 + 2 par jour de série (jusqu'à +28), +20 tous les 7 jours */
-function pbDaily(){const o=store.get(PBD,{d:'',s:0}),td=pbDay(0),ok=o.d!==td,s=o.d===td?o.s:(o.d===pbDay(1)?o.s+1:1);return{ok,s,r:ok?5+2*Math.min(s-1,14)+(s%7===0?20:0):0}}
-function pbDailyHTML(){const d=pbDaily();return d.ok?`<button class="cta" id="pbdl" style="background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2a00">🎁 Bonus du jour · +${d.r} 🪙<br><small>Série de ${d.s} jour${d.s>1?'s':''}${d.s%7===0?' · bonus de semaine inclus !':''}</small></button>`:`<p class="hint">🎁 Bonus du jour récupéré · série de ${d.s} jour${d.s>1?'s':''}. Reviens demain !</p>`}
+/* Bonus du jour : 100 🪙 par jour de connexion (la série de jours reste comptée) */
+function pbDaily(){const o=store.get(PBD,{d:'',s:0}),td=pbDay(0),ok=o.d!==td,s=o.d===td?o.s:(o.d===pbDay(1)?o.s+1:1);return{ok,s,r:ok?100:0}}
+function pbDailyHTML(){const d=pbDaily();return d.ok?`<button class="cta" id="pbdl" style="background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a2a00">🎁 Bonus du jour · +${d.r} 🪙<br><small>Série de ${d.s} jour${d.s>1?'s':''}</small></button>`:`<p class="hint">🎁 Bonus du jour récupéré · série de ${d.s} jour${d.s>1?'s':''}. Reviens demain !</p>`}
 function pbDailyBind(){const b=document.getElementById('pbdl');if(!b)return;b.onclick=()=>{const d=pbDaily();if(!d.ok)return;store.set(PBD,{d:pbDay(0),s:d.s});pbSet(pbd()+d.r);toast('🎁 +'+d.r+' 🪙 · série de '+d.s+' jour'+(d.s>1?'s':''));if(navigator.vibrate)navigator.vibrate(40);openX(xPb)}}
 /* Extension complétée : PB_SET 🪙, une seule fois par extension (les extensions déjà complètes comptent aussi) */
 function pbCheckSets(){try{
@@ -2034,7 +2034,7 @@ function pbGoalsHTML(){const d=store.get(PBGK,[]),r=(t,s,g)=>`<div class="row"><
   return '<h2>🎯 Comment gagner des 🪙</h2>'+PBG.map(g=>r((d.includes(g[0])?'✅ ':'🔒 ')+g[1],'','+'+g[2]+' 🪙')).join('')
   +r('🏆 Extension complétée','Une seule fois par extension','+'+PB_SET+' 🪙')
   
-  +r('🎴 1er booster du jour','','+'+PB_FP+' 🪙')+r('🎁 Bonus du jour','Série de jours d’affilée','+5 à +33 🪙')}
+  +r('🎴 1er booster du jour','','+'+PB_FP+' 🪙')+r('🎁 Bonus du jour','Chaque jour de connexion','+100 🪙')}
 })();
 </script>
 <style>
