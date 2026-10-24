@@ -1999,8 +1999,8 @@ function pbGoals(){try{const d=store.get(PBGK,[]),nw=PBG.filter(g=>!d.includes(g
   toast('🎯 '+(nw.length>1?nw.length+' objectifs atteints':'Objectif : '+nw[0][1])+' · +'+pbN(gain)+' 🪙');
   if(navigator.vibrate)navigator.vibrate([40,40,80])}catch(e){}}
 window.pbPack=function(pk){try{if(pk[0]&&pk[0].fam)return;const td=pbDay(0);if(store.get('pb_fp','')!==td){store.set('pb_fp',td);pbSet(pbd()+PB_FP)}}catch(e){}};
-setTimeout(()=>{try{if(store.get('pb_b300',0))return;store.set('pb_b300',1);pbSet(pbd()+300);
-const o=document.createElement('div');o.className='xbt';o.innerHTML='<div class="pbcost">🎁 +300 🪙</div><b>Bonus de connexion</b><small>Les Pokébidous ont été augmentés (échanges jusqu’à 10 🪙 par carte) : voici 300 🪙 offerts, une seule fois !</small><button class="cta" id="b3ok">Super !</button>';
+setTimeout(()=>{try{if(store.get('pb_b2500',0))return;store.set('pb_b2500',1);pbSet(pbd()+2500);
+const o=document.createElement('div');o.className='xbt';o.innerHTML='<div class="pbcost">🎁 +2 500 🪙</div><b>Bonus de connexion</b><small>Voici 2 500 🪙 Pokébidou offerts, une seule fois !</small><button class="cta" id="b3ok">Super !</button>';
 document.body.appendChild(o);o.querySelector('#b3ok').onclick=()=>o.remove()}catch(e){}},2500);
 function pbGoalsHTML(){const d=store.get(PBGK,[]),r=(t,s,g)=>`<div class="row"><div class="t"><b>${t}</b>${s?`<small>${s}</small>`:''}</div><em>${g}</em></div>`;
   return '<h2>🎯 Comment gagner des 🪙</h2>'+PBG.map(g=>r((d.includes(g[0])?'✅ ':'🔒 ')+g[1],'','+'+g[2]+' 🪙')).join('')
@@ -2776,8 +2776,8 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Escape')summary();
 });
 
-window.mbxOpen=openDialog;
-window.mbxQuick=function(N){if(busy||TY||BATTLE||M)return;const S=sets.find(x=>x.id===setId);if(!S)return;if(S.id==='fam'){toast('Les boosters Mystère s’ouvrent un par un (700 🪙 chacun).');return}const d=h('','');d.id='mbxd';d.innerHTML='<div class="mbxs"></div>';document.body.appendChild(d);begin(S,N,d)};
+window.mbxOpen=function(){};
+window.mbxQuick=function(N){return;if(busy||TY||BATTLE||M)return;const S=sets.find(x=>x.id===setId);if(!S)return;if(S.id==='fam'){toast('Les boosters Mystère s’ouvrent un par un (700 🪙 chacun).');return}const d=h('','');d.id='mbxd';d.innerHTML='<div class="mbxs"></div>';document.body.appendChild(d);begin(S,N,d)};
 }catch(e){console.error('mbx',e)}})();
 </script>
 
@@ -2842,13 +2842,6 @@ const _st=window.statsScreen;window.statsScreen=function(){_st.apply(this,argume
   let last=hh;while(last.nextElementSibling&&last.nextElementSibling.classList.contains('row'))last=last.nextElementSibling;
   last.insertAdjacentHTML('afterend',`<button class="lnk" id="xhf" style="width:100%">📜 Historique complet (${(stats.hist||[]).length})</button>`);
   document.getElementById('xhf').onclick=histOpen};
-
-/* ---------- Raccourci : ouvrir plusieurs boosters depuis le résultat ---------- */
-const _rs2=window.results;window.results=function(){_rs2.apply(this,arguments);
-  if(TY||BATTLE||(window.__mt&&window.__mt())||!window.mbxQuick||(typeof setId!=='undefined'&&setId==='fam'))return;
-  const b=[...$.querySelectorAll('.cta')].find(x=>/Rouvrir/.test(x.textContent));if(!b)return;
-  b.insertAdjacentHTML('beforebegin','<div id="xq" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:4px 0 8px"><small>Rouvrir d’un coup :</small>'+[3,5,10].map(n=>`<button class="chip" data-q="${n}">×${n}</button>`).join('')+'</div>');
-  $.querySelectorAll('#xq [data-q]').forEach(e=>e.onclick=()=>window.mbxQuick(+e.dataset.q))};
 
 /* ---------- Échanges de doublons entre amis ---------- */
 window.tradeDoc=function(){
