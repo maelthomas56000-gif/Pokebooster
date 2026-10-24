@@ -937,15 +937,17 @@ function focusScreen(){
     const t0=performance.now(),st=n=>{const k=Math.min(1,(n-t0)/320);drawCut(svg,pts.slice(0,Math.max(2,Math.round(k*N)+1)));if(k<1)requestAnimationFrame(st);else{zz=0;tearOpen(p,pts)}};requestAnimationFrame(st)};
 }
 
+let SKIPLAST=0;
 function home(){
   const IOS=true;
+  if(SKIPLAST)SKIPLAST=0;else{const L=stats&&stats.lastSet,sL=L&&sets.find(x=>x.id===L);if(sL){if(era!=='all'&&eraOf(sL)!==era)era='all';setId=L}}
   {const v=vis();if(v.length&&!v.some(s=>s.id===setId))setId=v[0].id}
   $.innerHTML=`<div class="top"><img class="brand" data-h src="https://upload.wikimedia.org/wikipedia/commons/9/98/International_Pok%C3%A9mon_logo.svg" alt=""><h1 id="meta"></h1><div class="sub" id="meta2"></div></div>
   <div class="chips era">${ERAS.map(([k,t])=>`<button class="chip ${era===k?'on':''}" data-e="${k}">${t}</button>`).join('')}</div>
   <div class="car" id="car">${vis().map(s=>IOS?`<div class="pk" data-id="${s.id}" style="--ph:${hue(s.id)}"></div>`:packHTML(s)).join('')}</div>
   <div class="swh">Touche un booster pour le choisir</div><button class="lnk" id="rnd">🎲 Booster surprise</button>`;
   const car=document.getElementById('car'); let st,drag=null;
-  document.querySelectorAll('.era .chip').forEach(b=>b.onclick=()=>{era=b.dataset.e;home()});
+  document.querySelectorAll('.era .chip').forEach(b=>b.onclick=()=>{era=b.dataset.e;SKIPLAST=1;home()});
   document.getElementById('rnd').onclick=()=>{const v=vis();if(!v.length)return;TY=false;fromSet=false;pickSet(rnd(v).id);go('focus')};
   car.querySelectorAll('.pk').forEach(p=>p.addEventListener('click',()=>{TY=false;fromSet=false;pickSet(p.dataset.id);go('focus')}));
   car.addEventListener('scroll',()=>{clearTimeout(st);st=setTimeout(()=>{if(!car.isConnected)return;
@@ -1019,7 +1021,7 @@ async function tearOpen(p,pts){
     if(!BATTLE&&(!TY||tyc.keep)&&window.pbPack)window.pbPack(pack);
     if(!BATTLE&&(!TY||tyc.keep)) pack.forEach(c=>{const o=col[c.id];col[c.id]={id:c.id,setId:c.setId,name:c.name,image:c.image,ni:c.ni,rp:c.rp,ri:c.ri,gen:c.gen,fam:c.fam,lid:c.lid,rarity:/^none$/i.test(c.rarity||'')?'':c.rarity,tier:c.tier,price:(c.o?(c.o[0]??c.o[1]):(c.p??c.ph))??o?.price??null,count:(o?.count||0)+1}});
     if(TY){const pr=tyc.etb>0?0:packPrice(id),mx=pack.reduce((m,c)=>Math.max(m,val(c)||0),0);tycPay={cost:pr,rev:packVal};tyc.money+=packVal-pr;tyc.life+=packVal;tyc.run+=packVal;tyc.packs++;if(tyc.etb>0)tyc.etb--;if(mx>tyc.best)tyc.best=mx;saveT()}
-    if(!BATTLE){stats.packs++;{const k=typeof id==='string'?id:setId;stats.bs=stats.bs||{};stats.bs[k]=(stats.bs[k]||0)+1}
+    if(!BATTLE){stats.packs++;if(!TY&&typeof id==='string')stats.lastSet=id;{const k=typeof id==='string'?id:setId;stats.bs=stats.bs||{};stats.bs[k]=(stats.bs[k]||0)+1}
     {const d=n=>{const t=new Date();t.setDate(t.getDate()-n);return t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()},td=d(0);
      if(stats.last!==td){stats.streak=stats.last===d(1)?(stats.streak||0)+1:1;stats.last=td;stats.bst=Math.max(stats.bst||0,stats.streak)}
      (stats.sp=stats.sp||{})[id]=(stats.sp[id]||0)+1}
