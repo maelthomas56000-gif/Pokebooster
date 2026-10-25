@@ -1732,7 +1732,11 @@ function pickShow(){const o=document.createElement('div');o.className='xbt';let 
   o.querySelector('#sr').onclick=()=>{store.set(SH,null);toast('Carte la plus chère affichée');done()};
   o.querySelector('#sc2').onclick=()=>o.remove()}
 function pickAv(){const o=document.createElement('div');o.className='xbt';let q='';
-  const done=v=>{store.set('av_v1',v);lastSig='';o.remove();push(true);paint()};
+  const done=v=>{const put=()=>{try{localStorage.setItem('av_v1',JSON.stringify(v));return true}catch(e){return false}};
+    let ok=put();
+    if(!ok){try{const fr=store.get(FR,[]);fr.forEach(f=>{if(f.b&&/^data:/.test(f.b.u||''))f.b.u=null;delete f.tr});localStorage.setItem(FR,JSON.stringify(fr))}catch(e){}ok=put()}
+    if(!ok)return toast('Stockage plein : photo non enregistrée');
+    lastSig='';o.remove();push(true);paint();toast(v?'Photo enregistrée':'Photo retirée')};
   const ids=()=>Object.keys(col).filter(id=>col[id].image&&(!q||nrm(col[id].name).includes(nrm(q)))).slice(0,90);
   const draw2=()=>{o.querySelector('#ag').innerHTML=ids().map(id=>`<div class="g" style="--i:0;--tc:${tc(col[id])}" data-a="${id}"><img src="${img(col[id])}" alt=""></div>`).join('')||'<p class="empty">Aucune carte.</p>';
     o.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>done(col[e.dataset.a].image))};
@@ -1740,7 +1744,7 @@ function pickAv(){const o=document.createElement('div');o.className='xbt';let q=
   document.body.appendChild(o);o.style.zIndex=70;draw2();
   o.querySelector('#aq').oninput=e=>{q=e.target.value;draw2()};o.querySelector('#ac2').onclick=()=>o.remove();
   o.querySelector('#aph').onclick=()=>o.querySelector('#af').click();
-  o.querySelector('#af').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{done(await resizePhoto(f))}catch(_){toast('Photo illisible, essaie une autre image')}};
+  o.querySelector('#af').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const v=await resizePhoto(f);e.target.value='';done(v)}catch(_){toast('Photo illisible, essaie une autre image')}};
   o.querySelector('#ar').onclick=()=>done('')}
 const THEMES=[['Classique'],['Hello Kitty','light',340,'#ffd0e4','#e60044'],['Minuit','dark',260,'#0f0d24'],['Océan','dark',200,'#08181f'],['Forêt','dark',140,'#0c1a12'],['Coucher de soleil','dark',18,'#1d0f12'],['Néon','dark',300,'#0a0516'],['Sakura','light',335,'#fbeef3'],['Sable','light',40,'#f6efe2'],['Kawaii','light',325,'#ffe6f2','#ff6fae'],['Bonbon','light',170,'#e4faf2','#2fc9a0'],['Lavande','light',270,'#efe9ff','#9378ff'],['Game Boy','light',75,'#c9db9b','#306230'],['Cyberpunk','dark',330,'#0d0221','#ff2a6d'],['Matrix','dark',130,'#020a04','#00ff66'],['Lave','dark',8,'#1a0605','#ff5a1f'],['Galaxie','dark',275,'#06041a','#b388ff']],XK='xth_v1';
 
