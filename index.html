@@ -558,7 +558,7 @@ window.famCard=f=>({id:'fam-'+f.k,lid:f.k,name:f.n,image:'',ni:0,rp:0,ri:-1,gen:
 let API='https://api.tcgdex.net/v2/en',KEY='collection_v3',SKEY='stats_v3';
 const T={C:['Commune','#9aa3c4'],U:['Peu commune','#5fb3ff'],R:['Rare','#ffd166'],RH:['Rare holo','#ff8fd8'],UR:['Ultra rare','#c084ff'],SR:['Rare secrète','#ffe14d'],E:['Énergie','#7ddc8a'],F:['Mystère','#ff7eb6']};
 const RANK={E:0,C:0,U:1,R:2,RH:3,UR:4,SR:5,F:2};
-const store={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const store={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set:(k,v)=>{try{const s=JSON.stringify(v),o=localStorage.getItem(k);localStorage.setItem(k,s);if(window.__accDirty)window.__accDirty(k,o,s)}catch(e){}}};
 const HID=new Set(store.get('hid_v1',[]));
 let sq='',sets=[],setId=null,screen='home',pack=[],idx=0,L=[],pre={},B={},flt='all',viewId=null,fromSet=false,busy=false,packVal=0;
 let col=store.get(KEY,{}),stats=store.get(SKEY,{packs:0,best:null});
@@ -3414,6 +3414,150 @@ while(w.nextNode())l.push(w.currentNode);
 l.forEach(n=>{const f=document.createDocumentFragment();n.nodeValue.split(E).forEach((t,i)=>{if(i){const m=new Image();m.className='pbi';m.alt='Pokébidou';m.src=U;f.appendChild(m)}if(t)f.appendChild(document.createTextNode(t))});n.replaceWith(f)})}catch(e){}}
 const go=()=>{if(!q)q=requestAnimationFrame(run)};
 new MutationObserver(go).observe(document.body,{childList:true,subtree:true,characterData:true});go()})();
+</script>
+<script id="acc-js">
+/* ===== Compte (Google + e-mail) et synchronisation automatique ===== */
+(function(){
+const FK='AIzaSyBB84eer2Mh_lzwalbSfHAeevh9zDOOVdE',PID='poke-3342a';
+const DB='https://firestore.googleapis.com/v1/projects/'+PID+'/databases/(default)/documents';
+const DBN='projects/'+PID+'/databases/(default)/documents';
+/* Données synchronisées (les caches d'images/extensions et les réglages de perf ne le sont pas) */
+const SYNC=['collection_v3','stats_v3','cfg_v1','wal_v1','tycoon_v1','fav_v1','bind_v1','show_v1','mus_v1','pbd_v1','pb_daily_v1','pb_goals_v1','ofx_v1','snp_v1','diag_v1','me_v1','pid_v1','friends_v2','bt_v1','rw_seen','rw_owned','trd_o','trd_k','trd_log','hid_v1','pb_fp','mbx_n'];
+const LS=localStorage;
+const J=(k,d)=>{try{return JSON.parse(LS.getItem(k))??d}catch(e){return d}};
+const W=(k,v)=>{try{LS.setItem(k,JSON.stringify(v))}catch(e){}};
+const E=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+let T=J('acc_t',{}),dirty=new Set(J('acc_d',[])),user=null,auth=null,syncing=false,applying=false,tm=0,status='',lastChk=0,muted=false;
+
+/* ---------- Messages d'erreur ---------- */
+const FRM={'auth/invalid-email':'Adresse e-mail invalide.','auth/user-not-found':'E-mail ou mot de passe incorrect.','auth/wrong-password':'E-mail ou mot de passe incorrect.','auth/invalid-credential':'E-mail ou mot de passe incorrect.','auth/email-already-in-use':'Cette adresse a déjà un compte : connecte-toi.','auth/weak-password':'Mot de passe trop court (6 caractères minimum).','auth/missing-password':'Entre ton mot de passe.','auth/network-request-failed':'Pas de connexion internet.','auth/too-many-requests':'Trop d’essais, réessaie dans quelques minutes.','auth/operation-not-allowed':'Ce mode de connexion n’est pas activé dans la console Firebase.','auth/unauthorized-domain':'Ce site n’est pas dans les domaines autorisés de Firebase (Authentication → Paramètres).','auth/popup-closed-by-user':'','auth/cancelled-popup-request':'','auth/user-disabled':'Ce compte est désactivé.'};
+const fr=e=>{const c=e&&e.code;return c in FRM?FRM[c]:(e&&e.message==='sdk'?'Impossible de charger la connexion (internet ?).':'Erreur : '+(c||(e&&e.message)||'inconnue'))};
+const msg=t=>{const m=document.getElementById('acm');if(m)m.textContent=t||''};
+
+/* ---------- SDK Firebase Auth (chargé à la demande) ---------- */
+const SDK='https://www.gstatic.com/firebasejs/10.12.2/';
+const ld=s=>new Promise((ok,ko)=>{const e=document.createElement('script');e.src=SDK+s;e.onload=ok;e.onerror=()=>ko(new Error('sdk'));document.head.appendChild(e)});
+let sdkP=null;
+const sdk=()=>sdkP||(sdkP=ld('firebase-app-compat.js').then(()=>ld('firebase-auth-compat.js')).then(()=>{
+  if(!firebase.apps.length)firebase.initializeApp({apiKey:FK,authDomain:PID+'.firebaseapp.com',projectId:PID});
+  auth=firebase.auth();
+  auth.getRedirectResult().then(()=>LS.removeItem('acc_rd')).catch(e=>{LS.removeItem('acc_rd');msg(fr(e))});
+  auth.onAuthStateChanged(onUser);
+  return auth}).catch(e=>{sdkP=null;throw e}));
+
+/* ---------- Accès Firestore (REST, avec le jeton du compte) ---------- */
+const api=async(path,opt)=>{opt=opt||{};const t=await user.getIdToken();
+  const r=await fetch(DB+path,{...opt,headers:{'Content-Type':'application/json',Authorization:'Bearer '+t}});
+  if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}return r.json()};
+const base=()=>'/saves/'+user.uid+'/kv';
+async function remote(){
+  const m={},ch={};let pt='';
+  do{const d=await api(base()+'?pageSize=100'+(pt?'&pageToken='+encodeURIComponent(pt):''));
+    (d.documents||[]).forEach(x=>{const id=decodeURIComponent(x.name.split('/').pop()),f=x.fields||{},s=k=>f[k]&&f[k].stringValue,n=k=>f[k]&&+f[k].integerValue;
+      if(id.includes('~'))ch[id]=s('v')||'';else m[id]={v:s('v')||'',n:n('n')||1,t:n('t')||0}});
+    pt=d.nextPageToken||''}while(pt);
+  const out={};
+  for(const k in m){let v=m[k].v,ok=true;for(let i=1;i<m[k].n;i++){if(ch[k+'~'+i]===undefined){ok=false;break}v+=ch[k+'~'+i]}
+    if(ok)out[k]={v,t:m[k].t}}
+  return out}
+const CH=250000;
+function writes(k){
+  const v=LS.getItem(k);if(v==null)return[];
+  const t=T[k]||Date.now(),parts=[];let i=0;
+  while(i<v.length){let e=Math.min(i+CH,v.length);const c=v.charCodeAt(e-1);if(e<v.length&&c>=0xD800&&c<=0xDBFF)e--;parts.push(v.slice(i,e));i=e}
+  if(!parts.length)parts.push('');
+  return parts.map((p,j)=>({update:{name:DBN+base()+'/'+(j?k+'~'+j:k),fields:j?{v:{stringValue:p}}:{v:{stringValue:p},n:{integerValue:String(parts.length)},t:{integerValue:String(t)}}}}))}
+async function doFlush(){
+  const ks=[...dirty];let err=null;
+  for(const k of ks){dirty.delete(k);
+    try{const w=writes(k);for(let i=0;i<w.length;i+=100)await api(':commit',{method:'POST',body:JSON.stringify({writes:w.slice(i,i+100)})})}
+    catch(e){dirty.add(k);err=e}}
+  W('acc_d',[...dirty]);if(err)throw err}
+async function flush(){if(!user||syncing||!dirty.size)return;syncing=true;
+  try{await doFlush();stamp()}catch(e){status='Hors ligne : sera réessayé';paint()}syncing=false}
+const stamp=()=>{const d=new Date();status='À jour · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});LS.setItem('acc_ls',status);paint()};
+
+/* ---------- Détection des modifications locales (appelé par store.set) ---------- */
+const norm=s=>{try{return JSON.stringify(JSON.parse(s),(k,v)=>(k==='d'||k==='tr'||k==='pend'||k==='wait')?undefined:v)}catch(e){return s}};
+window.__accDirty=function(k,o,s){
+  if(!LS.getItem('acc_u')||applying||SYNC.indexOf(k)<0||o===s)return;
+  if(k==='friends_v2'&&o!=null&&norm(o)===norm(s))return;
+  T[k]=Date.now();W('acc_t',T);dirty.add(k);W('acc_d',[...dirty]);
+  clearTimeout(tm);tm=setTimeout(flush,3000)};
+
+/* ---------- Synchronisation ---------- */
+const hasLocal=()=>Object.keys(J('collection_v3',{})).length>0||(J('stats_v3',{}).packs||0)>0;
+async function reconcile(mode){
+  if(!user||syncing)return;syncing=true;status='Synchronisation…';paint();
+  try{
+    const R=await remote(),now=Date.now();
+    if(LS.getItem('acc_u')!==user.uid){
+      const hasR=Object.keys(R).length>0;
+      if(hasR&&hasLocal()){
+        if(confirm('Ce compte contient déjà une sauvegarde, et cet appareil aussi.\n\nOK = charger la sauvegarde du COMPTE (remplace les données de cet appareil)\nAnnuler = garder cet appareil et l’envoyer sur le compte (remplace celle du compte)'))T={};
+        else SYNC.forEach(k=>{if(LS.getItem(k)!=null)T[k]=now})}
+      else if(!hasR)SYNC.forEach(k=>{if(LS.getItem(k)!=null)T[k]=now});
+      LS.setItem('acc_u',user.uid);W('acc_t',T)}
+    const pull=[];
+    for(const k of SYNC){const r=R[k],lt=T[k]||0;
+      if(r&&r.t>lt){if(r.v!==LS.getItem(k))pull.push(k);else{T[k]=r.t}}
+      else if(LS.getItem(k)!=null&&(!r||lt>r.t)){if(!T[k])T[k]=now;dirty.add(k)}}
+    let apply=pull.length>0;
+    if(apply&&mode==='visible'){apply=!muted&&confirm('Une sauvegarde plus récente de ton compte est disponible. La charger maintenant ?');if(!apply)muted=true}
+    let n=0;
+    if(apply){applying=true;
+      for(const k of pull){try{LS.setItem(k,R[k].v);T[k]=R[k].t;dirty.delete(k);n++}catch(e){}}
+      applying=false}
+    W('acc_t',T);W('acc_d',[...dirty]);
+    await doFlush();stamp();
+    if(n&&Date.now()-(+sessionStorage.getItem('acc_rl')||0)>20000){sessionStorage.setItem('acc_rl',String(Date.now()));location.reload()}
+  }catch(e){status=(e.status===403?'Accès refusé : règles Firebase à publier':'Hors ligne ou erreur')+(e.status?' ('+e.status+')':'');paint()}
+  syncing=false}
+
+const onUser=u=>{user=u;if(u){LS.setItem('acc_on','1');reconcile('login')}paint()};
+
+/* ---------- Interface (réglages) ---------- */
+const INP='width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #ffffff30;background:#0003;color:inherit;font-size:16px';
+function paint(){
+  const b=document.getElementById('accbox');if(!b)return;
+  if(user){
+    b.dataset.out='0';
+    b.innerHTML=`<div class="row st"><div class="t"><b>${E(user.email||user.displayName||'Compte connecté')}</b><small>${E(status||LS.getItem('acc_ls')||'')}</small></div><button class="chip on" id="acs">Synchroniser</button></div>
+    <div class="row st"><div class="t"><b>Se déconnecter</b><small>Tes données restent sur cet appareil</small></div><button class="chip dg" id="aco">Déconnexion</button></div>`;
+    document.getElementById('acs').onclick=()=>reconcile('manual');
+    document.getElementById('aco').onclick=async()=>{try{await flush()}catch(e){}LS.removeItem('acc_on');try{await auth.signOut()}catch(e){}user=null;status='';paint()};
+  }else{
+    if(b.dataset.out==='1')return;b.dataset.out='1';
+    b.innerHTML=`<div class="row st"><div class="t"><b>Compte</b><small>Retrouve ta collection et tes réglages sur tous tes appareils, automatiquement.</small></div></div>
+    <button class="cta" id="acg">Continuer avec Google</button>
+    <div class="row st" style="flex-direction:column;align-items:stretch;gap:8px">
+      <input id="ace" type="email" autocomplete="email" placeholder="E-mail" style="${INP}">
+      <input id="acp" type="password" autocomplete="current-password" placeholder="Mot de passe (6 caractères minimum)" style="${INP}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="chip on" id="aci">Se connecter</button><button class="chip on" id="acn">Créer un compte</button><button class="lnk" id="acr" style="padding:6px">Mot de passe oublié ?</button></div>
+      <small id="acm" style="color:#ff9aa8"></small></div>`;
+    const run=f=>async()=>{msg('');try{await sdk();await f()}catch(e){msg(fr(e))}};
+    const val=()=>[document.getElementById('ace').value.trim(),document.getElementById('acp').value];
+    document.getElementById('acg').onclick=run(async()=>{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+      try{await auth.signInWithPopup(p)}catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'){LS.setItem('acc_rd','1');await auth.signInWithRedirect(p)}else throw e}});
+    document.getElementById('aci').onclick=run(async()=>{const[e,p]=val();await auth.signInWithEmailAndPassword(e,p)});
+    document.getElementById('acn').onclick=run(async()=>{const[e,p]=val();await auth.createUserWithEmailAndPassword(e,p)});
+    document.getElementById('acr').onclick=run(async()=>{const[e]=val();if(!e){msg('Entre ton e-mail ci-dessus d’abord.');return}await auth.sendPasswordResetEmail(e);msg('E-mail de réinitialisation envoyé ✓')});
+    sdk().catch(()=>{}); /* préchargement : le popup Google doit s'ouvrir dès le clic */
+  }}
+const prev=window.settingsScreen;
+window.settingsScreen=function(){
+  prev.apply(this,arguments);
+  try{const h=[...document.getElementById('app').querySelectorAll('h2')].find(x=>x.textContent.trim()==='Mes données');
+    if(h&&!document.getElementById('accbox')){h.insertAdjacentHTML('beforebegin','<h2>Compte</h2><div id="accbox"></div>');paint()}}catch(e){}};
+
+/* ---------- Démarrage ---------- */
+if(LS.getItem('acc_on')||LS.getItem('acc_rd'))sdk().catch(()=>{});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){clearTimeout(tm);flush()}
+  else if(user&&Date.now()-lastChk>9e4){lastChk=Date.now();reconcile('visible')}});
+window.addEventListener('pagehide',()=>{try{flush()}catch(e){}});
+lastChk=Date.now();
+})();
 </script>
 </body>
 </html>
