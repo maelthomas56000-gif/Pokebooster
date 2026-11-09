@@ -564,6 +564,7 @@ let sq='',sets=[],setId=null,screen='home',pack=[],idx=0,L=[],pre={},B={},flt='a
 let col=store.get(KEY,{}),stats=store.get(SKEY,{packs:0,best:null});
 const $=document.getElementById('app');
 const j=async(u,n=1)=>{for(let i=0;;i++){const ct=new AbortController(),t=setTimeout(()=>ct.abort(),15000);try{const r=await fetch(u,{signal:ct.signal});clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}catch(e){clearTimeout(t);if(i>=n)throw e;await new Promise(r=>setTimeout(r,700))}}};
+const jx=async p=>{try{return await j(API+p)}catch(err){return await j(API.replace(/\/(fr|en)$/,m=>m==='/fr'?'/en':'/fr')+p)}};
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const fmt=n=>n==null?'—':n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
 const rgbArt=l=>{const C={R:['#ff3b4a','#6d0010'],G:['#2be585','#04502a'],B:['#3a74ff','#06145c']}[String(l).toUpperCase()]||['#aaa','#333'];
@@ -688,7 +689,7 @@ async function brief(id){
   let b=store.get('b9'+cfg.lang+'_'+id,null);
   if(b&&/^me06$/i.test(id)&&(b.c||[]).length<100)b=null;
   if(!b){
-    const s=await j(`${API}/sets/${id}`), isL=c=>/^[RGB]$/i.test(c.localId),cs=s.cards.filter(c=>c.image&&!isL(c)),ex=s.cards.filter(isL);
+    const s=await jx(`/sets/${id}`), isL=c=>/^[RGB]$/i.test(c.localId),cs=s.cards.filter(c=>c.image&&!isL(c)),ex=s.cards.filter(isL);
     let rp=[]; if(is30(s)){try{const r=await j(`${API}/sets/${id}-c`);rp=(r.cards||[]).map(c=>['c-'+c.localId,c.name,2,c.image||'']);if(rp.some(x=>!x[3])){try{const e=await j(`${API.replace(/\/(fr|en)$/,m=>m==='/fr'?'/en':'/fr')}/sets/${id}-c`),M={};(e.cards||[]).forEach(c=>{if(c.image)M[c.localId]=c.image});rp.forEach(x=>{if(!x[3])x[3]=M[x[0].slice(2)]||''})}catch(_){}}}catch(e){}}
     let base=cs.length?cs[0].image.replace(/\/[^/]+$/,''):'',list=cs,g=0;
     if(!cs.length){
@@ -739,7 +740,7 @@ async function loadSet(id){
   let d=store.get('d5'+cfg.lang+'_'+id,null); if(!d||Date.now()-d.t>12096e5) d={t:Date.now(),d:{}};
   const q=cards.filter(c=>!d.d[c.id]), total=q.length; let done=0;
   const worker=async()=>{while(q.length){const c=q.pop();
-    try{const x=await j(`${API}/cards/${c.id}`),m=x.pricing?.cardmarket||{};
+    try{const x=await jx(`/cards/${c.id}`),m=x.pricing?.cardmarket||{};
       d.d[c.id]=[x.rarity||'',x.category||'',...pxs(id,c.id,m,x.pricing?.tcgplayer)]}catch(e){}
     const p=document.getElementById('prog');if(p)p.textContent=`${++done}/${total}`}};
   await Promise.all(Array.from({length:10},worker));
@@ -1524,6 +1525,7 @@ function render(){
     let list=null,err='';
     const other=API.replace(/\/(fr|en)$/,m=>m==='/fr'?'/en':'/fr');
     for(const base of [API,other]){try{list=await j(base+'/sets');break}catch(e){err=(e&&e.name==='AbortError')?'délai dépassé':(e&&e.message)||String(e)}}
+    if(list&&!list.some(x=>x.id==='me06')){try{const ol=await j(other+'/sets'),m=(ol||[]).find(x=>x.id==='me06');if(m)list=[...list,m]}catch(e){}}
     if(list)store.set('sets_'+cfg.lang,list);else list=store.get('sets_'+cfg.lang,null);
     if(!list){
       $.innerHTML=`<div class="center" style="flex-direction:column;gap:14px;padding:24px;text-align:center"><p class="hint">Impossible de charger les extensions.<br><small>${esc(err)}</small></p><button class="cta" id="rt">Réessayer</button></div>`;
@@ -1733,7 +1735,7 @@ async function rates(sid){if(RATE[sid])return RATE[sid];
 async function enrichCard(c,sid){
   const k='d5'+cfg.lang+'_'+sid;let d=store.get(k,null);if(!d||Date.now()-d.t>12096e5)d={t:Date.now(),d:{}};
   let e=d.d[c.id];
-  if(!e&&!c.ni){try{const x=await j(`${API}/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{};e=[x.rarity||'',x.category||'',...pxs(sid,c.id,m,x.pricing&&x.pricing.tcgplayer)];d.d[c.id]=e;store.set(k,d)}catch(_){}}
+  if(!e&&!c.ni){try{const x=await jx(`/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{};e=[x.rarity||'',x.category||'',...pxs(sid,c.id,m,x.pricing&&x.pricing.tcgplayer)];d.d[c.id]=e;store.set(k,d)}catch(_){}}
   const [r,kc,p,ph]=e||['','',null,null];
   return {...c,setId:sid,rarity:r||(c.ni?'RGB Rare':r),tier:c.ni?'SR':tier(r,kc,p??ph),p,ph}}
 window.zoomAny=async id=>{const sid=viewId,c=cardsOf(B[sid],sid).find(x=>x.id===id);if(!c)return;
@@ -2451,7 +2453,7 @@ async function priceChart(c,lb){
   const box=lb.querySelector('.pch');if(!box||c.ni||c.gen||c.rp||c.fam||!c.id)return;
   const k='ph1_'+cfg.lang+'_'+c.id;let h=null;try{h=store.get(k,null)}catch(e){}
   if(!h||Date.now()-h.t>216e5){
-    try{const x=await j(`${API}/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{},g=n=>typeof m[n]==='number'?m[n]:null;
+    try{const x=await jx(`/cards/${c.id}`),m=(x.pricing&&x.pricing.cardmarket)||{},g=n=>typeof m[n]==='number'?m[n]:null;
       h={t:Date.now(),s:[g('avg30'),g('avg7'),g('avg1'),g('trend')],h:[g('avg30-holo'),g('avg7-holo'),g('avg1-holo'),g('trend-holo')]};
       try{store.set(k,h)}catch(e){}}catch(e){return}}
   const X=[0,23/30,29/30,1],n=a=>a.filter(v=>v!=null).length;
