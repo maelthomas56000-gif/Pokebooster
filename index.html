@@ -1534,6 +1534,7 @@ function render(){
     $.innerHTML='<div class="center" style="flex-direction:column;gap:12px"><div class="spin"></div><b>Préparation des boosters…</b><small class="hint" id="pl">0 %</small></div>';
     await Promise.race([preloadHome().catch(()=>{}),new Promise(r=>setTimeout(r,7000))]);
     READY=1;
+    setTimeout(()=>{try{toast(sets.some(x=>x.id==='me06')?'Règne Delta : trouvée ✅':'Règne Delta : introuvable sur TCGdex ❌')}catch(e){}},1200);
     try{render()}catch(e){$.innerHTML='<p class="hint center">Erreur d\'affichage : '+esc(e.message)+'</p>'}
   };
   window.addEventListener('online',()=>{if(!sets.length)boot()});
