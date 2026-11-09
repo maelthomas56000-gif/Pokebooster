@@ -1533,7 +1533,7 @@ function render(){
     const other=API.replace(/\/(fr|en)$/,m=>m==='/fr'?'/en':'/fr');
     for(const base of [API,other]){try{list=await j(base+'/sets');break}catch(e){err=(e&&e.name==='AbortError')?'délai dépassé':(e&&e.message)||String(e)}}
     if(list&&!list.some(x=>x.id==='me06')){try{const ol=await j(other+'/sets'),m=(ol||[]).find(x=>x.id==='me06');if(m)list=[...list,m]}catch(e){}}
-    if(list&&!list.some(x=>x.id==='me06'))list=[...list,{id:'me06',name:cfg.lang==='fr'?'Règne Delta':'Delta Reign',cardCount:{total:141,official:103},logo:null,local:true}];
+    if(list)list=[...list.filter(x=>x.id!=='me06'),{id:'me06',name:cfg.lang==='fr'?'Règne Delta':'Delta Reign',cardCount:{total:141,official:103},logo:null,local:true}];
     if(list&&list.some(x=>x.id==='me06'&&x.local))window.ME06LOCAL=true;
     if(list)store.set('sets_'+cfg.lang,list);else list=store.get('sets_'+cfg.lang,null);
     if(!list){
@@ -1543,7 +1543,7 @@ function render(){
     $.innerHTML='<div class="center" style="flex-direction:column;gap:12px"><div class="spin"></div><b>Préparation des boosters…</b><small class="hint" id="pl">0 %</small></div>';
     await Promise.race([preloadHome().catch(()=>{}),new Promise(r=>setTimeout(r,7000))]);
     READY=1;
-    setTimeout(()=>{try{toast(window.ME06LOCAL?'Règne Delta : version intégrée ✅':'Règne Delta : chargée depuis TCGdex ✅')}catch(e){}},1200);
+    setTimeout(()=>{try{toast(sets.some(x=>x.id==='me06')?'Règne Delta : version intégrée ✅':'Règne Delta : absente ❌')}catch(e){}},1200);
     try{render()}catch(e){$.innerHTML='<p class="hint center">Erreur d\'affichage : '+esc(e.message)+'</p>'}
   };
   window.addEventListener('online',()=>{if(!sets.length)boot()});
