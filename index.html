@@ -564,6 +564,11 @@ let sq='',sets=[],setId=null,screen='home',pack=[],idx=0,L=[],pre={},B={},flt='a
 let col=store.get(KEY,{}),stats=store.get(SKEY,{packs:0,best:null});
 const $=document.getElementById('app');
 const j=async(u,n=1)=>{for(let i=0;;i++){const ct=new AbortController(),t=setTimeout(()=>ct.abort(),15000);try{const r=await fetch(u,{signal:ct.signal});clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}catch(e){clearTimeout(t);if(i>=n)throw e;await new Promise(r=>setTimeout(r,700))}}};
+/* ===== Règne Delta (ME06) intégrée : utilisée tant que TCGdex ne fournit pas l'extension ===== */
+window.ME06=[["Heracross","C"],["Surskit","C"],["Masquerain","C"],["Cacnea","C"],["Cacturne","R"],["Combee","C"],["Vespiquen","C"],["Shaymin","U"],["Virizion","U"],["Wimpod","C"],["Mega Golisopod ex","D"],["Sprigatito","C"],["Floragato","U"],["Meowscarada ex","D"],["Smoliv","C"],["Dolliv","C"],["Arboliva","U"],["Growlithe","C"],["Arcanine","R"],["Magmar","U"],["Magmortar","R"],["Torkoal","C"],["Heat Rotom ex","D"],["Heatmor","C"],["Mantine","C"],["Kyogre","R"],["Frillish","C"],["Jellicent","U"],["Wishiwashi ex","D"],["Electabuzz","C"],["Electivire","U"],["Jolteon","U"],["Raikou ex","D"],["Rotom","C"],["Thundurus","U"],["Pincurchin","C"],["Pawmi","C"],["Pawmo","C"],["Pawmot","U"],["Wattrel","C"],["Kilowattrel","U"],["Miraidon","U"],["Drowzee","C"],["Hypno","C"],["Giratina","R"],["Golett","C"],["Mega Golurk ex","D"],["Enamorus","U"],["Sandshrew","C"],["Sandslash","C"],["Onix","C"],["Steelix","R"],["Groudon","R"],["Landorus","U"],["Nidoran F","C"],["Nidorina","C"],["Nidoqueen","R"],["Spinarak","C"],["Ariados","C"],["Sableye","C"],["Carvanha","C"],["Sharpedo","C"],["Darkrai","U"],["Purrloin","C"],["Liepard","C"],["Zorua","C"],["Zoroark ex","D"],["Inkay","C"],["Mega Malamar ex","D"],["Morpeko","U"],["Zarude","U"],["Druddigon","U"],["Jangmo-o","C"],["Hakamo-o","C"],["Kommo-o","R"],["Cyclizar","C"],["Tauros","C"],["Eevee","C"],["Delibird","U"],["Azurill","C"],["Swablu","C"],["Altaria","R"],["Kecleon","C"],["Mega Rayquaza ex","D"],["Tornadus","U"],["Fletchling","C"],["Fletchinder","C"],["Talonflame ex","D"],["Aarune","U"],["Adventure Lantern","U"],["Custom Vest","U"],["Emcee's Hype","C"],["Grisham","U"],["Legendary Pyroduct (Left)","U"],["Legendary Pyroduct (Right)","U"],["Legendary Summit (Left)","U"],["Legendary Summit (Right)","U"],["Legendary Trench (Left)","U"],["Legendary Trench (Right)","U"],["Mega Rayquaza Cap","U"],["Tasty Rice Ball","C"],["Tate & Liza's Training","U"],["Zinnia's Trust","U"],["Masquerain","I"],["Sprigatito","I"],["Growlithe","I"],["Magmortar","I"],["Electivire","I"],["Pincurchin","I"],["Enamorus","I"],["Groudon","I"],["Zorua","I"],["Inkay","I"],["Eevee","I"],["Azurill","I"],["Altaria","I"],["Kecleon","I"],["Mega Golisopod ex","X"],["Heat Rotom ex","X"],["Wishiwashi ex","X"],["Raikou ex","X"],["Mega Golurk ex","X"],["Mega Malamar ex","X"],["Talonflame ex","X"],["Aarune","X"],["Adventure Lantern","X"],["Custom Vest","X"],["Emcee's Hype","X"],["Pokemon Catcher","X"],["Tate & Liza's Training","X"],["Zinnia's Trust","X"],["Bubbly W Energy","X"],["Growing G Energy","X"],["Nitro R Energy","X"],["Mega Golisopod ex","S"],["Raikou ex","S"],["Mega Golurk ex","S"],["Mega Rayquaza ex","S"],["Aarune","S"],["Zinnia's Trust","S"],["Mega Rayquaza ex","M"]];
+window.ME06IMG='https://pub-20ee170c554940ac8bfcce8af2da57a8.r2.dev/cards/me06/';
+window.ME06RAR={C:['Common',.25],U:['Uncommon',.31],R:['Rare',.35],D:['Double Rare',1.66],I:['Illustration Rare',9.15],X:['Ultra Rare',3.53],S:['Special Illustration Rare',96.6],M:['Mega Hyper Rare',355]};
+window.ME06LOCAL=false;
 const jx=async p=>{try{return await j(API+p)}catch(err){return await j(API.replace(/\/(fr|en)$/,m=>m==='/fr'?'/en':'/fr')+p)}};
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const fmt=n=>n==null?'—':n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
@@ -685,6 +690,7 @@ document.addEventListener('pointermove',e=>{const t=e.target.closest&&e.target.c
 // ---------- Données ----------
 async function brief(id){
   if(id==='fam')return B.fam||(B.fam={b:'',g:0,c:FAM.map(f=>[f.k,f.n])});
+  if(id==='me06'&&window.ME06LOCAL)return B[id]||(B[id]={b:'',g:0,c:window.ME06.map((x,i)=>[String(i+1).padStart(3,'0'),x[0],0,window.ME06IMG+(i+1)+'.webp'])});
   if(B[id]) return B[id];
   let b=store.get('b9'+cfg.lang+'_'+id,null);
   if(b&&/^me06$/i.test(id)&&(b.c||[]).length<100)b=null;
@@ -736,6 +742,7 @@ function pxs(sid,cid,m,t){m=m||{};t=t||{};
 
 async function loadSet(id){
   if(id==='fam')return FAM.map(famCard);
+  if(id==='me06'&&window.ME06LOCAL){const cs=cardsOf(await brief(id),id);return cs.map(c=>{const x=window.ME06[+c.lid-1]||['','C'],[r,p]=window.ME06RAR[x[1]];return {...c,setId:id,rarity:r,tier:tier(r,'Pokémon',p),p,ph:null}})}
   const cards=cardsOf(await brief(id),id);
   let d=store.get('d5'+cfg.lang+'_'+id,null); if(!d||Date.now()-d.t>12096e5) d={t:Date.now(),d:{}};
   const q=cards.filter(c=>!d.d[c.id]), total=q.length; let done=0;
@@ -1526,6 +1533,8 @@ function render(){
     const other=API.replace(/\/(fr|en)$/,m=>m==='/fr'?'/en':'/fr');
     for(const base of [API,other]){try{list=await j(base+'/sets');break}catch(e){err=(e&&e.name==='AbortError')?'délai dépassé':(e&&e.message)||String(e)}}
     if(list&&!list.some(x=>x.id==='me06')){try{const ol=await j(other+'/sets'),m=(ol||[]).find(x=>x.id==='me06');if(m)list=[...list,m]}catch(e){}}
+    if(list&&!list.some(x=>x.id==='me06'))list=[...list,{id:'me06',name:cfg.lang==='fr'?'Règne Delta':'Delta Reign',cardCount:{total:141,official:103},logo:null,local:true}];
+    if(list&&list.some(x=>x.id==='me06'&&x.local))window.ME06LOCAL=true;
     if(list)store.set('sets_'+cfg.lang,list);else list=store.get('sets_'+cfg.lang,null);
     if(!list){
       $.innerHTML=`<div class="center" style="flex-direction:column;gap:14px;padding:24px;text-align:center"><p class="hint">Impossible de charger les extensions.<br><small>${esc(err)}</small></p><button class="cta" id="rt">Réessayer</button></div>`;
@@ -1534,7 +1543,7 @@ function render(){
     $.innerHTML='<div class="center" style="flex-direction:column;gap:12px"><div class="spin"></div><b>Préparation des boosters…</b><small class="hint" id="pl">0 %</small></div>';
     await Promise.race([preloadHome().catch(()=>{}),new Promise(r=>setTimeout(r,7000))]);
     READY=1;
-    setTimeout(()=>{try{toast(sets.some(x=>x.id==='me06')?'Règne Delta : trouvée ✅':'Règne Delta : introuvable sur TCGdex ❌')}catch(e){}},1200);
+    setTimeout(()=>{try{toast(window.ME06LOCAL?'Règne Delta : version intégrée ✅':'Règne Delta : chargée depuis TCGdex ✅')}catch(e){}},1200);
     try{render()}catch(e){$.innerHTML='<p class="hint center">Erreur d\'affichage : '+esc(e.message)+'</p>'}
   };
   window.addEventListener('online',()=>{if(!sets.length)boot()});
