@@ -691,7 +691,7 @@ document.addEventListener('pointermove',e=>{const t=e.target.closest&&e.target.c
 async function brief(id){
   if(id==='fam')return B.fam||(B.fam={b:'',g:0,c:FAM.map(f=>[f.k,f.n])});
   if(id==='me06'&&window.ME06LOCAL){if(B[id])return B[id];
-    const p3=n=>String(n).padStart(3,'0'),SRC=[n=>window.ME06IMG+n+'.webp',n=>`https://assets.tcgdex.net/fr/me/me06/${p3(n)}/high.webp`,n=>`https://assets.tcgdex.net/en/me/me06/${p3(n)}/high.webp`,n=>`https://images.pokemontcg.io/me6/${n}_hires.png`];
+    const p3=n=>String(n).padStart(3,'0'),SRC=[n=>`https://images.scrydex.com/pokemon/me6-${n}/large`,n=>window.ME06IMG+n+'.webp',n=>`https://assets.tcgdex.net/fr/me/me06/${p3(n)}/high.webp`,n=>`https://assets.tcgdex.net/en/me/me06/${p3(n)}/high.webp`,n=>`https://images.pokemontcg.io/me6/${n}_hires.png`];
     const ok=u=>new Promise(r=>{const i=new Image();const t=setTimeout(()=>r(false),7000);i.onload=()=>{clearTimeout(t);r(true)};i.onerror=()=>{clearTimeout(t);r(false)};i.referrerPolicy='no-referrer';i.src=u});
     let pick=0;for(let k=0;k<SRC.length;k++){if((await ok(SRC[k](1)))||(await ok(SRC[k](84)))){pick=k;break}}
     window.ME06SRC=pick;
