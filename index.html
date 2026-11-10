@@ -580,7 +580,8 @@ const rgbImg=l=>RGBIMG[String(l).toUpperCase()]||rgbArt(l);
 const genArt=c=>{const h=hue(c.setId||c.id||'x'),cl=t=>String(t||'').replace(/[<>&"']/g,''),n=cl(c.name),l=cl(c.lid),
   w=n.split(' ').reduce((a,x)=>{const t=a[a.length-1];if(t&&(t+' '+x).length<=14)a[a.length-1]=t+' '+x;else a.push(x);return a},[]).slice(0,3);
   return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 245 342"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${h} 70% 62%)"/><stop offset="1" stop-color="hsl(${(h+40)%360} 65% 30%)"/></linearGradient></defs><rect width="245" height="342" rx="12" fill="#f4e7a1"/><rect x="9" y="9" width="227" height="324" rx="7" fill="url(#g)"/><rect x="22" y="36" width="201" height="150" rx="5" fill="#fff" fill-opacity=".16"/><circle cx="122" cy="111" r="40" fill="#f4f4f4" stroke="#222" stroke-width="5"/><path d="M82 111a40 40 0 0 1 80 0z" fill="#e63946" stroke="#222" stroke-width="5"/><circle cx="122" cy="111" r="10" fill="#fff" stroke="#222" stroke-width="5"/>${w.map((t,i)=>`<text x="122" y="${226+i*25}" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="20" fill="#fff">${t}</text>`).join('')}<text x="122" y="318" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#fff" fill-opacity=".85">${l}</text></svg>`)};
-const img=(c,q='high')=>c.fam?FAMIMG[c.fam]:c.gen?genArt(c):c.rp&&c.ri>=0&&RPU[c.ri]?RPU[c.ri]:c.ni?(c.rp?(c.ri>=0?RPD[c.ri]:rpArt(c.name)):rgbImg(c.lid||String(c.id).split('-').pop())):`${c.image}/${q}.webp`;
+const DIRECTIMG=u=>/(\.(webp|png|jpe?g)|\/(large|medium|small))$/i.test(u||'');
+const img=(c,q='high')=>c.fam?FAMIMG[c.fam]:c.gen?genArt(c):c.rp&&c.ri>=0&&RPU[c.ri]?RPU[c.ri]:c.ni?(c.rp?(c.ri>=0?RPD[c.ri]:rpArt(c.name)):rgbImg(c.lid||String(c.id).split('-').pop())):(DIRECTIMG(c.image)?c.image:`${c.image}/${q}.webp`);
 const val=c=>c.rev?(c.ph??c.p):(c.p??c.ph);
 const tc=c=>c.rev&&RANK[c.tier]<3?'#6ee7ff':(T[c.tier]||T.C)[1];
 const label=c=>c.fam?'Carte Mystère':c.rev?'Reverse holo':((c.rarity&&!/^none$/i.test(c.rarity)&&c.rarity)||(T[c.tier]||T.C)[0]);
@@ -1617,7 +1618,7 @@ const myId=()=>{let c=store.get('pid_v1',null);if(!c){const A='ABCDEFGHJKMNPQRST
 const dec=s=>{s=(s||'').trim();if(!s.startsWith('PB1-'))throw 0;const o=JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));if(!o||typeof o.n!=='string')throw 0;return o};
 const name=()=>store.get(ME,{name:''}).name||'';
 const real=u=>typeof u==='string'&&/^https?:\/\//.test(u);
-const cu=(c,q)=>{const u=c.gen||c.ni?null:(c.rp&&c.ri>=0&&RPU[c.ri])?RPU[c.ri]:c.image?c.image+'/'+q+'.webp':null;return real(u)?u:null};
+const cu=(c,q)=>{const u=c.gen||c.ni?null:(c.rp&&c.ri>=0&&RPU[c.ri])?RPU[c.ri]:c.image?(DIRECTIMG(c.image)?c.image:c.image+'/'+q+'.webp'):null;return real(u)?u:null};
 const av0=()=>store.get('av_v1','')||'';
 const mine=loc=>{const own=Object.values(col),top=sel()||own.reduce((a,c)=>(c.price||0)>((a&&a.price)||0)?c:a,null),a=av0(),ph=a.startsWith('data:')?a:'';
   const m={n:name()||'Dresseur',p:stats.packs||0,u:own.length,t:own.reduce((s,c)=>s+c.count,0),v:Math.round(totalValue()*100)/100,ver:5,s:stats.streak||0,g:stats.gn||0,o:{l:cfg.luck,p:cfg.gp,m:cfg.miss?1:0},r:own.filter(c=>c.tier==='SR'||c.tier==='UR').reduce((s,c)=>s+c.count,0),b:top?{c:sel()?1:0,k:top.fam||null,r:(top.rp&&top.ri>=0)?top.ri:null,n:top.name,p:top.price||0,u:cu(top,'high'),i:(top.ni||top.gen||top.rp)?null:(real(top.image)?top.image:null),l:(top.ni&&!top.rp&&!top.gen)?String(top.lid||String(top.id).split('-').pop()).toUpperCase():null}:null,bt:[],a:ph?'':a,f:favs().slice(0,4).map(id=>col[id]).map(c=>({n:c.name,u:cu(c,'low'),i:real(c.image)?c.image:null})).filter(x=>x.u),d:Date.now()};
